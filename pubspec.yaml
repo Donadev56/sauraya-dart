@@ -44,6 +44,10 @@ dependencies:
   flutter_native_splash: ^2.2.19
   socket_io_client: ^3.0.2
   font_awesome_flutter: '>= 4.7.0'
+  speech_to_text: ^7.0.0
+  permission_handler: ^11.0.0
+  http: ^1.0.0
+  audioplayers: ^6.1.0
 
 
 dev_dependencies:

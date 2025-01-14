@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/logger/logger.dart';
@@ -9,6 +12,10 @@ import 'package:sauraya/widgets/message_manager.dart';
 import 'package:sauraya/widgets/options_button.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:http/http.dart' as http;
+import 'package:audioplayers/audioplayers.dart';
+
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -24,6 +31,10 @@ String prompt = "";
 Messages messages = [];
 final TextEditingController _textController = TextEditingController();
 final ScrollController _messagesScrollController = ScrollController();
+stt.SpeechToText speech = stt.SpeechToText();
+bool _speechEnabled = false;
+bool isListening = false;
+
 late IO.Socket socket;
 bool isGeneratingResponse = false;
 
@@ -40,6 +51,80 @@ class _ChatScreenState extends State<ChatScreen> {
       showCustomSnackBar(
           context: context, message: "error during stop socket generation $e");
     }
+  }
+
+  void readResponse (String text) async {
+    try {
+      log("reading $text");
+      final request = {"text" : text };
+      final mainUrl = "converter.sauraya.com";
+      final url = "https://$mainUrl/convert/";
+      log("Sending a request to $url");
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+
+        body: json.encode(request),
+      );
+      if (response.statusCode == 200) {
+        log("Converted successfully");
+        final audioBytes =  response.bodyBytes;
+         playAudio(audioBytes);
+      } else {
+        log("Error converting text: $response.body");
+        showCustomSnackBar(
+            context: context,
+            message: "Error converting text: $response.body",
+            iconColor: Colors.pinkAccent);
+        return;
+      }
+      
+    } catch (e) {
+      log(e as String);
+      showCustomSnackBar(
+          context: context, message: "error during read response $e");
+      
+    }
+  }
+void playAudio(Uint8List audioBytes) async {
+  final player = AudioPlayer();
+  await player.play(BytesSource(audioBytes)); // Lit les données depuis la mémoire
+}
+  void startListening() async {
+    try {
+      if (!_speechEnabled) {
+        logError("Speech recognition is not enabled");
+        showCustomSnackBar(
+            context: context,
+            message: "Speech recognition is not enabled ",
+            iconColor: Colors.pinkAccent);
+        return;
+      }
+      setState(() {
+        isListening = true;
+      });
+      await speech.listen(
+        onResult: (result) => {
+          setState(
+            () {
+              prompt = result.recognizedWords;
+              _textController.text = prompt;
+            },
+          )
+        },
+      );
+    } catch (e) {
+      logError("error during listen $e");
+      showCustomSnackBar(context: context, message: "error during listen $e");
+    }
+  }
+
+  void stopListening() async {
+    await speech.stop();
+    setState(() {
+      isListening = false;
+    });
   }
 
   void sendMessage() async {
@@ -74,6 +159,37 @@ class _ChatScreenState extends State<ChatScreen> {
       log("Prmpts sent to the server");
     } catch (e) {
       logError(e.toString());
+    }
+  }
+
+  void _initSpeech() async {
+    try {
+      _speechEnabled = await speech.initialize(
+        onError: ((error) {
+          logError("Error initializing speech recognition");
+          showCustomSnackBar(
+            context: context,
+            message: "Error initializing speech recognition",
+            icon: Icons.error,
+            iconColor: Colors.pinkAccent,
+          );
+        }),
+        onStatus: (status) => {
+          if (status == 'done' || status == 'notListening')
+            {
+              setState(() {
+                isListening = false;
+              })
+            }
+        },
+      );
+      setState(() {});
+    } catch (e) {
+      showCustomSnackBar(
+          context: context,
+          message: "An error occured $e",
+          icon: Icons.error,
+          iconColor: Colors.pinkAccent);
     }
   }
 
@@ -174,6 +290,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     connectToSocket();
+    _initSpeech();
   }
 
   @override
@@ -247,6 +364,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       itemCount: messages.length,
                       itemBuilder: (BuildContext context, int i) {
                         return MessageManager(
+                          readResponse: readResponse ,
                           messages: messages,
                           index: i,
                           primaryColor: primaryColor,
@@ -274,7 +392,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         onPressed: () {
                           log("adding ");
                         },
-                        icon: Icon(Icons.add),
+                        icon: Icon(Icons.image),
                         color: Colors.white,
                       ),
                     )),
@@ -327,11 +445,25 @@ class _ChatScreenState extends State<ChatScreen> {
                                 width: 0,
                               )),
                           contentPadding: const EdgeInsets.all(12),
-                          suffixIcon: IconButton(
-                            onPressed: () {},
-                            icon: Icon(Icons.mic),
-                            color: Colors.white,
-                          )),
+                          suffixIcon: ClipRRect(
+                              borderRadius: BorderRadius.circular(50),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: isListening
+                                        ? Colors.blue
+                                        : Colors.transparent),
+                                child: IconButton(
+                                  onPressed: () {
+                                    if (isListening) {
+                                      stopListening();
+                                    } else {
+                                      startListening();
+                                    }
+                                  },
+                                  icon: Icon(Icons.mic),
+                                  color: Colors.white,
+                                ),
+                              ))),
                       style: TextStyle(color: Colors.white),
                     ),
                   ),

@@ -47,5 +47,9 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSMicrophoneUsageDescription</key>
+        <string>We need the microphone for voice recognition</string>
+        <key>NSSpeechRecognitionUsageDescription</key>
+        <string>We need the microphone for voice recognition</string>
 	</dict>
 </plist>

@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       title: 'Sauraya AI',
       theme: ThemeData(
         textSelectionTheme: TextSelectionThemeData(
-            selectionHandleColor: Colors.orange, selectionColor: Colors.orange),
+            selectionHandleColor: Colors.blue, selectionColor: Colors.blue),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),

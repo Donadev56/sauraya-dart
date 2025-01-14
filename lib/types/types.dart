@@ -1,7 +1,7 @@
 typedef Messages = List<Message>;
 
 class Message {
-  final String role; 
+  final String role;
   final String content;
   final List<String>? images;
 
@@ -30,7 +30,7 @@ class Message {
 
 class OllamaChatRequest {
   final String model;
-  final Messages messages; 
+  final Messages messages;
   final bool? stream;
 
   OllamaChatRequest({

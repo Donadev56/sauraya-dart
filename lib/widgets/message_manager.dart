@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:flutter_highlight/themes/vs2015.dart';
 
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
@@ -19,6 +20,7 @@ class MessageManager extends StatelessWidget {
   final Color primaryColor;
   final Color secondaryColor;
   final Color darkbgColor;
+  final Function readResponse ;
 
   const MessageManager({
     Key? key,
@@ -27,6 +29,7 @@ class MessageManager extends StatelessWidget {
     required this.primaryColor,
     required this.secondaryColor,
     required this.darkbgColor,
+    required this.readResponse,
   }) : super(key: key);
 
   @override
@@ -36,43 +39,98 @@ class MessageManager extends StatelessWidget {
     final String msg = messages[index].content;
 
     if (isAssistant) {
-      return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(10),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth:
-                  MediaQuery.of(context).size.width, // Contraintes explicites
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min, // Adapte la taille au contenu
-              crossAxisAlignment:
-                  CrossAxisAlignment.start, // Aligne les éléments en haut
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(75),
-                  child: Image.asset(
-                    'lib/assets/transparent/image.png',
-                    fit: BoxFit.cover,
-                    width: 35, // Taille de l'image
-                    height: 35,
+      return InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onLongPress: () async {
+          final result = await showMenu(
+              context: context,
+              position: RelativeRect.fromLTRB(50, 400, 100,100),
+              color: Color(0XFF212121),
+              items: [
+                PopupMenuItem(
+                    value: "listen",
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.volume_up,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Text(
+                          "Listen response",
+                          style: TextStyle(color: Colors.white70),
+                        )
+                      ],
+                    )),
+                PopupMenuItem(
+                    value: "regenerate",
+                    child: Row(
+                      children: [
+                        Icon(FeatherIcons.refreshCcw, color: Colors.white),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Text("Regenerate response",
+                            style: TextStyle(color: Colors.white70))
+                      ],
+                    )),
+                PopupMenuItem(
+                    value: "copy",
+                    child: Row(
+                      children: [
+                        Icon(FeatherIcons.copy, color: Colors.white),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Text("Copy response",
+                            style: TextStyle(color: Colors.white70))
+                      ],
+                    )),
+              ]);
+             if (result == "listen") {
+               readResponse(msg);
+             }
+        },
+        child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(10),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth:
+                    MediaQuery.of(context).size.width, // Contraintes explicites
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min, // Adapte la taille au contenu
+                crossAxisAlignment:
+                    CrossAxisAlignment.start, // Aligne les éléments en haut
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(75),
+                    child: Image.asset(
+                      'lib/assets/transparent/image.png',
+                      fit: BoxFit.cover,
+                      width: 35, // Taille de l'image
+                      height: 35,
+                    ),
                   ),
-                ),
-                const SizedBox(
-                    width: 10), // Espacement entre l'image et le texte
-                Expanded(
-                  child: MarkdownBody(
-                    data: msg,
-                    styleSheet: MarkdownCustomStyle.customStyle,
-                    builders: {
-                      'code': CodeElementBuilder(
-                          textColor: secondaryColor, context: context),
-                    },
+                  const SizedBox(
+                      width: 10), // Espacement entre l'image et le texte
+                  Expanded(
+                    child: MarkdownBody(
+                      data: msg,
+                      styleSheet: MarkdownCustomStyle.customStyle,
+                      builders: {
+                        'code': CodeElementBuilder(
+                            textColor: secondaryColor, context: context),
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ));
+                ],
+              ),
+            )),
+      );
     }
     if (isUser) {
       return Align(

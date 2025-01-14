@@ -1,4 +1,4 @@
-package com.example.sauraya
+package com.opennode.sauraya
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -78,7 +78,6 @@ final CodeCustomTheme = {
       TextStyle(color: Colors.cyan, decoration: TextDecoration.underline),
 };
 
-
 const VsCode = {
   'root': TextStyle(
       backgroundColor: Colors.transparent,
