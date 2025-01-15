@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
-import 'package:flutter_highlight/themes/vs2015.dart';
 
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/types/types.dart';
-import 'package:sauraya/utils/remove_markdown.dart';
 import 'package:sauraya/utils/snackbar_manager.dart';
 import 'package:sauraya/widgets/code_custom_style.dart';
 import 'package:sauraya/widgets/styleSheet_widget.dart';
@@ -41,7 +39,6 @@ class MessageManager extends StatelessWidget {
     if (isAssistant) {
       return InkWell(
         borderRadius: BorderRadius.circular(20),
-        
         onLongPress: () async {
           final result = await showMenu(
               context: context,
@@ -97,13 +94,17 @@ class MessageManager extends StatelessWidget {
         child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(10),
-            margin:messages.length == index +1 ? const EdgeInsets.only(top: 5, bottom: 70):  const EdgeInsets.all(0) ,
+            margin: messages.length == index + 1
+                ? const EdgeInsets.only(top: 5, bottom: 70)
+                : const EdgeInsets.all(0),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth:
-                    MediaQuery.of(context).size.width, // Contraintes explicites
-                    minHeight: messages.length == index +1 ? MediaQuery.of(context).size.height * 0.6 : 0
-              ),
+                  maxWidth: MediaQuery.of(context)
+                      .size
+                      .width, // Contraintes explicites
+                  minHeight: messages.length == index + 1
+                      ? MediaQuery.of(context).size.height * 0.6
+                      : 0),
               child: Row(
                 mainAxisSize: MainAxisSize.min, // Adapte la taille au contenu
                 crossAxisAlignment:
@@ -139,33 +140,29 @@ class MessageManager extends StatelessWidget {
     }
     if (isUser) {
       return Align(
-        
-        alignment: Alignment.topRight,
-        child:Container(
-     margin:messages.length == index +1 ? const EdgeInsets.only(top: 5, bottom: 70):  const EdgeInsets.all(0) ,
-
-        child:
-
-         ConstrainedBox(
-          
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.85,
-          ),
+          alignment: Alignment.topRight,
           child: Container(
-            margin: const EdgeInsets.all(5),
-
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.all(Radius.circular(15)),
-              color: darkbgColor,
+            margin: messages.length == index + 1
+                ? const EdgeInsets.only(top: 5, bottom: 70)
+                : const EdgeInsets.all(0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.85,
+              ),
+              child: Container(
+                margin: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(Radius.circular(15)),
+                  color: darkbgColor,
+                ),
+                child: Text(
+                  msg,
+                  style: TextStyle(color: secondaryColor),
+                ),
+              ),
             ),
-            child: Text(
-              msg,
-              style: TextStyle(color: secondaryColor),
-            ),
-          ),
-        ),
-      ));
+          ));
     } else {
       return Container();
     }
@@ -208,8 +205,8 @@ class CodeElementBuilder extends MarkdownElementBuilder {
               Spacer(),
               IconButton(
                 onPressed: () {
-                  String plaintext = removeMarkdown(element.textContent);
-                  Clipboard.setData(ClipboardData(text: plaintext)).then((_) {
+                  Clipboard.setData(ClipboardData(text: element.textContent))
+                      .then((_) {
                     showCustomSnackBar(
                         context: context,
                         message: "Copied",

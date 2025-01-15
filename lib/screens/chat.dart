@@ -66,7 +66,7 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         isAudioLoading = true;
       });
-     
+
       final textWithEmojis = removeMarkdown(markdown);
       final text = removeEmojis(textWithEmojis);
       log("reading $text");
@@ -87,10 +87,9 @@ class _ChatScreenState extends State<ChatScreen> {
         playAudio(audioBytes);
       } else {
         log("Error converting text");
-          setState(() {
-      isAudioLoading = false;
-
-      });
+        setState(() {
+          isAudioLoading = false;
+        });
         showCustomSnackBar(
             context: context,
             message: "Error converting text",
@@ -100,8 +99,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       log(e as String);
       setState(() {
-      isAudioLoading = false;
-
+        isAudioLoading = false;
       });
       showCustomSnackBar(
           context: context, message: "error during read response");
@@ -204,8 +202,6 @@ class _ChatScreenState extends State<ChatScreen> {
             curve: Curves.easeOut,
           );
         }
-        
-        
       });
       OllamaChatRequest newChatRequest = OllamaChatRequest(
           messages: lastMessages, model: "llama3.2:1b", stream: true);
@@ -261,7 +257,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       io.on(SocketEvents.partialResponse, (data) {
         log("New data received $data");
-        
+
         io.on(SocketEvents.error, (error) {
           logError("Error received $error");
           showCustomSnackBar(
@@ -299,19 +295,19 @@ class _ChatScreenState extends State<ChatScreen> {
             Message newMessage =
                 Message(role: "assistant", content: textResponse);
             messages = [...messages, newMessage];
-               currentNumberOfResponse ++;
+            currentNumberOfResponse++;
 
-             _messagesScrollController.animateTo(
-            _messagesScrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
+            _messagesScrollController.animateTo(
+              _messagesScrollController.position.maxScrollExtent,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
           });
-          
+
           return;
         }
-        if (currentNumberOfResponse == 2){
-           _messagesScrollController.animateTo(
+        if (currentNumberOfResponse == 2) {
+          _messagesScrollController.animateTo(
             _messagesScrollController.position.maxScrollExtent,
             duration: Duration(milliseconds: 300),
             curve: Curves.easeOut,
@@ -325,16 +321,13 @@ class _ChatScreenState extends State<ChatScreen> {
           log("New message: $newText , last message : ${lastMessage.content}");
           Message newMessage = Message(content: newText, role: "assistant");
           lastMessages[messages.length - 1] = newMessage;
-          currentNumberOfResponse ++;
+          currentNumberOfResponse++;
           setState(() {
             messages = lastMessages;
           });
-          
         });
-        
-        
+
         if (done) {
-          
           setState(() {
             isGeneratingResponse = false;
             _messagesScrollController.animateTo(
@@ -351,10 +344,10 @@ class _ChatScreenState extends State<ChatScreen> {
         logError("Disconnect from the server $server");
       });
     } catch (e) {
-       setState(() {
-         isGeneratingResponse = false;
-         currentNumberOfResponse = 0;
-       });
+      setState(() {
+        isGeneratingResponse = false;
+        currentNumberOfResponse = 0;
+      });
       logError(e.toString());
       showCustomSnackBar(
           context: context,
@@ -466,26 +459,30 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 )
               : Center(
-                  child: ListView.builder(
-                    
-                      controller: _messagesScrollController,
-                      padding: const EdgeInsets.all(10),
-                      itemCount: messages.length,
-                      itemBuilder: (BuildContext context, int i) {
-                        return MessageManager(
-                          readResponse: readResponse,
-                          messages: messages,
-                          index: i,
-                          primaryColor: primaryColor,
-                          secondaryColor: secondaryColor,
-                          darkbgColor: darkbgColor,
-                        );
-                      }),
-                ),
+                  child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 728),
+                  child: Center(
+                    child: ListView.builder(
+                        controller: _messagesScrollController,
+                        padding: const EdgeInsets.all(10),
+                        itemCount: messages.length,
+                        itemBuilder: (BuildContext context, int i) {
+                          return MessageManager(
+                            readResponse: readResponse,
+                            messages: messages,
+                            index: i,
+                            primaryColor: primaryColor,
+                            secondaryColor: secondaryColor,
+                            darkbgColor: darkbgColor,
+                          );
+                        }),
+                  ),
+                )),
           Positioned(
               bottom: 0,
               child: AnimatedContainer(
                 decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
                   color: Color(0XFF0D0D0D),
                 ),
                 duration: const Duration(milliseconds: 200),

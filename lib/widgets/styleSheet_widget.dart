@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_highlight/themes/a11y-dark.dart';
-import 'package:flutter_highlight/themes/darcula.dart';
+
 import 'package:flutter_highlight/themes/dark.dart';
-import 'package:flutter_highlight/themes/lightfair.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'package:markdown_widget/widget/all.dart';
-import 'package:sauraya/screens/chat.dart';
 
 class MarkdownCustomStyle {
   static MarkdownStyleSheet get customStyle {
