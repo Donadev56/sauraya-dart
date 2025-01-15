@@ -38,7 +38,7 @@ bool isListening = false;
 Duration _duration = Duration.zero;
 Duration _position = Duration.zero;
 bool _isPlaying = false;
-bool canScrollAuto = false;
+int currentNumberOfResponse = 0;
 bool isAudioLoading = false;
 
 AudioPlayer audioPlayer = AudioPlayer();
@@ -63,9 +63,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void readResponse(String markdown) async {
     try {
-      setState(() {
-        isAudioLoading = true;
-      });
+     
       final textWithEmojis = removeMarkdown(markdown);
       final text = removeEmojis(textWithEmojis);
       log("reading $text");
@@ -94,9 +92,7 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       log(e as String);
-      setState(() {
-        isAudioLoading = false;
-      });
+     
       showCustomSnackBar(
           context: context, message: "error during read response $e");
     }
@@ -190,6 +186,7 @@ class _ChatScreenState extends State<ChatScreen> {
         isGeneratingResponse = true;
 
         _textController.clear();
+
         if (messages.length > 1) {
           _messagesScrollController.animateTo(
             _messagesScrollController.position.maxScrollExtent,
@@ -197,6 +194,8 @@ class _ChatScreenState extends State<ChatScreen> {
             curve: Curves.easeOut,
           );
         }
+        
+        
       });
       OllamaChatRequest newChatRequest = OllamaChatRequest(
           messages: lastMessages, model: "llama3.2:1b", stream: true);
@@ -252,6 +251,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       io.on(SocketEvents.partialResponse, (data) {
         log("New data received $data");
+        
         io.on(SocketEvents.error, (error) {
           logError("Error received $error");
           showCustomSnackBar(
@@ -288,12 +288,26 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() {
             Message newMessage =
                 Message(role: "assistant", content: textResponse);
-
             messages = [...messages, newMessage];
-            canScrollAuto = true;
+               currentNumberOfResponse ++;
+
+             _messagesScrollController.animateTo(
+            _messagesScrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
           });
+          
           return;
         }
+        if (currentNumberOfResponse == 2){
+           _messagesScrollController.animateTo(
+            _messagesScrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+
         Messages lastMessages = [...messages];
         Message lastMessage = lastMessages[lastMessages.length - 1];
         String newText = lastMessage.content + textResponse;
@@ -301,18 +315,16 @@ class _ChatScreenState extends State<ChatScreen> {
           log("New message: $newText , last message : ${lastMessage.content}");
           Message newMessage = Message(content: newText, role: "assistant");
           lastMessages[messages.length - 1] = newMessage;
+          currentNumberOfResponse ++;
           setState(() {
             messages = lastMessages;
           });
+          
         });
-        if (canScrollAuto) {
-          _messagesScrollController.animateTo(
-            _messagesScrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
+        
+        
         if (done) {
+          
           setState(() {
             isGeneratingResponse = false;
             _messagesScrollController.animateTo(
@@ -320,6 +332,7 @@ class _ChatScreenState extends State<ChatScreen> {
               duration: Duration(milliseconds: 300),
               curve: Curves.easeOut,
             );
+            currentNumberOfResponse = 0;
           });
           readResponse(newText);
         }
@@ -328,6 +341,10 @@ class _ChatScreenState extends State<ChatScreen> {
         logError("Disconnect from the server $server");
       });
     } catch (e) {
+       setState(() {
+         isGeneratingResponse = false;
+         currentNumberOfResponse = 0;
+       });
       logError(e.toString());
       showCustomSnackBar(
           context: context,
@@ -439,6 +456,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 )
               : Center(
                   child: ListView.builder(
+                    
                       controller: _messagesScrollController,
                       padding: const EdgeInsets.all(10),
                       itemCount: messages.length,

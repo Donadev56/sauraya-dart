@@ -41,6 +41,7 @@ class MessageManager extends StatelessWidget {
     if (isAssistant) {
       return InkWell(
         borderRadius: BorderRadius.circular(20),
+        
         onLongPress: () async {
           final result = await showMenu(
               context: context,
@@ -96,11 +97,12 @@ class MessageManager extends StatelessWidget {
         child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(10),
-            margin: const EdgeInsets.only(top: 5, bottom: 70),
+            margin:messages.length == index +1 ? const EdgeInsets.only(top: 5, bottom: 70):  const EdgeInsets.all(0) ,
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth:
                     MediaQuery.of(context).size.width, // Contraintes explicites
+                    minHeight: messages.length == index +1 ? MediaQuery.of(context).size.height * 0.6 : 0
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min, // Adapte la taille au contenu
