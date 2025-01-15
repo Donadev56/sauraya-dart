@@ -6,7 +6,9 @@ import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/types/enums.dart';
 import 'package:sauraya/types/types.dart';
+import 'package:sauraya/utils/remove_markdown.dart';
 import 'package:sauraya/utils/snackbar_manager.dart';
+import 'package:sauraya/widgets/audio_player.dart';
 import 'package:sauraya/widgets/custom_app_bar.dart';
 import 'package:sauraya/widgets/message_manager.dart';
 import 'package:sauraya/widgets/options_button.dart';
@@ -15,7 +17,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
-
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -34,6 +35,13 @@ final ScrollController _messagesScrollController = ScrollController();
 stt.SpeechToText speech = stt.SpeechToText();
 bool _speechEnabled = false;
 bool isListening = false;
+Duration _duration = Duration.zero;
+Duration _position = Duration.zero;
+bool _isPlaying = false;
+bool canScrollAuto = false;
+bool isAudioLoading = false;
+
+AudioPlayer audioPlayer = AudioPlayer();
 
 late IO.Socket socket;
 bool isGeneratingResponse = false;
@@ -53,24 +61,29 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void readResponse (String text) async {
+  void readResponse(String markdown) async {
     try {
+      setState(() {
+        isAudioLoading = true;
+      });
+      final textWithEmojis = removeMarkdown(markdown);
+      final text = removeEmojis(textWithEmojis);
       log("reading $text");
-      final request = {"text" : text };
+
+      final request = {"text": text};
       final mainUrl = "converter.sauraya.com";
       final url = "https://$mainUrl/convert/";
       log("Sending a request to $url");
-      
+
       final response = await http.post(
         Uri.parse(url),
         headers: {"Content-Type": "application/json"},
-
         body: json.encode(request),
       );
       if (response.statusCode == 200) {
         log("Converted successfully");
-        final audioBytes =  response.bodyBytes;
-         playAudio(audioBytes);
+        final audioBytes = response.bodyBytes;
+        playAudio(audioBytes);
       } else {
         log("Error converting text: $response.body");
         showCustomSnackBar(
@@ -79,18 +92,50 @@ class _ChatScreenState extends State<ChatScreen> {
             iconColor: Colors.pinkAccent);
         return;
       }
-      
     } catch (e) {
       log(e as String);
+      setState(() {
+        isAudioLoading = false;
+      });
       showCustomSnackBar(
           context: context, message: "error during read response $e");
-      
     }
   }
-void playAudio(Uint8List audioBytes) async {
-  final player = AudioPlayer();
-  await player.play(BytesSource(audioBytes)); // Lit les données depuis la mémoire
-}
+
+  void playAudio(Uint8List audioBytes) async {
+    try {
+      await audioPlayer.play(BytesSource(audioBytes));
+      setState(() {
+        _isPlaying = true;
+        isAudioLoading = false;
+      });
+    } catch (e) {
+      log("Error playing audio $e");
+      setState(() {
+        isAudioLoading = false;
+      });
+      showCustomSnackBar(
+          context: context,
+          message: "Error playing audio: $e",
+          iconColor: Colors.pinkAccent);
+    }
+  }
+
+  void stopPlaying() async {
+    try {
+      audioPlayer.stop();
+      setState(() {
+        _isPlaying = false;
+      });
+    } catch (e) {
+      log("Error stopping audio $e");
+      showCustomSnackBar(
+          context: context,
+          message: "Error stopping audio: $e",
+          iconColor: Colors.pinkAccent);
+    }
+  }
+
   void startListening() async {
     try {
       if (!_speechEnabled) {
@@ -239,19 +284,20 @@ void playAudio(Uint8List audioBytes) async {
 
         if (isFirst) {
           log("First Message received ");
+
           setState(() {
             Message newMessage =
                 Message(role: "assistant", content: textResponse);
-            setState(() {
-              messages = [...messages, newMessage];
-            });
+
+            messages = [...messages, newMessage];
+            canScrollAuto = true;
           });
           return;
         }
+        Messages lastMessages = [...messages];
+        Message lastMessage = lastMessages[lastMessages.length - 1];
+        String newText = lastMessage.content + textResponse;
         setState(() {
-          Messages lastMessages = [...messages];
-          Message lastMessage = lastMessages[lastMessages.length - 1];
-          String newText = lastMessage.content + textResponse;
           log("New message: $newText , last message : ${lastMessage.content}");
           Message newMessage = Message(content: newText, role: "assistant");
           lastMessages[messages.length - 1] = newMessage;
@@ -259,10 +305,23 @@ void playAudio(Uint8List audioBytes) async {
             messages = lastMessages;
           });
         });
+        if (canScrollAuto) {
+          _messagesScrollController.animateTo(
+            _messagesScrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
         if (done) {
           setState(() {
             isGeneratingResponse = false;
+            _messagesScrollController.animateTo(
+              _messagesScrollController.position.maxScrollExtent,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
           });
+          readResponse(newText);
         }
       });
       io.onDisconnect((_) {
@@ -283,6 +342,7 @@ void playAudio(Uint8List audioBytes) async {
   void dispose() {
     _textController.dispose();
     _messagesScrollController.dispose();
+    audioPlayer.dispose();
     super.dispose();
   }
 
@@ -290,7 +350,26 @@ void playAudio(Uint8List audioBytes) async {
   void initState() {
     super.initState();
     connectToSocket();
+
     _initSpeech();
+    audioPlayer.onDurationChanged.listen((duration) {
+      setState(() {
+        _duration = duration;
+      });
+    });
+
+    audioPlayer.onPositionChanged.listen((position) {
+      setState(() {
+        _position = position;
+      });
+    });
+
+    audioPlayer.onPlayerComplete.listen((event) {
+      setState(() {
+        _isPlaying = false;
+        _position = Duration.zero;
+      });
+    });
   }
 
   @override
@@ -299,10 +378,11 @@ void playAudio(Uint8List audioBytes) async {
       backgroundColor: primaryColor,
       appBar:
           TopBar(primaryColor: primaryColor, secondaryColor: secondaryColor),
-      body: Column(
+      body: Stack(
+        alignment: Alignment.center,
         children: [
           messages.isEmpty
-              ? Expanded(
+              ? Center(
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -357,14 +437,14 @@ void playAudio(Uint8List audioBytes) async {
                     ),
                   ),
                 )
-              : Expanded(
+              : Center(
                   child: ListView.builder(
                       controller: _messagesScrollController,
                       padding: const EdgeInsets.all(10),
                       itemCount: messages.length,
                       itemBuilder: (BuildContext context, int i) {
                         return MessageManager(
-                          readResponse: readResponse ,
+                          readResponse: readResponse,
                           messages: messages,
                           index: i,
                           primaryColor: primaryColor,
@@ -373,140 +453,167 @@ void playAudio(Uint8List audioBytes) async {
                         );
                       }),
                 ),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(15),
-            child: Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween, // Espacement uniforme
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                ClipRRect(
-                    borderRadius: BorderRadius.all(Radius.circular(50)),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(color: Colors.grey),
-                      child: IconButton(
-                        onPressed: () {
-                          log("adding ");
-                        },
-                        icon: Icon(Icons.image),
-                        color: Colors.white,
-                      ),
-                    )),
-                SizedBox(
-                  width: 5,
+          Positioned(
+              bottom: 0,
+              child: AnimatedContainer(
+                decoration: BoxDecoration(
+                  color: Color(0XFF0D0D0D),
                 ),
-                Expanded(
-                  // Assure que le TextField occupe l'espace restant entre les icônes
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width *
-                            0.6, // Max 60% de largeur
-                        maxHeight: 200),
-                    child: TextField(
-                      cursorColor: Colors.white60,
-                      controller: _textController,
-                      maxLines: null,
-                      onChanged: (value) {
-                        setState(() {
-                          prompt = value;
-                        });
-                      },
-                      decoration: InputDecoration(
-                          hintText: "Message Sauraya",
-                          hintStyle: TextStyle(
-                            color: Colors.white70,
-                            fontStyle: FontStyle.italic,
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(15),
+                child: Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween, // Espacement uniforme
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    ClipRRect(
+                        borderRadius: BorderRadius.all(Radius.circular(50)),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(color: Colors.grey),
+                          child: IconButton(
+                            onPressed: () {
+                              log("adding ");
+                            },
+                            icon: Icon(Icons.image),
+                            color: Colors.white,
                           ),
-                          focusedBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(30)),
-                              borderSide: BorderSide(
-                                color: Colors.transparent,
-                                width: 0,
-                              )),
-                          enabledBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(30)),
-                              borderSide: BorderSide(
-                                color: Colors.transparent,
-                                width: 0,
-                              )),
-                          filled: true,
-                          fillColor: Color(0XFF252525),
-                          border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(30)),
-                              borderSide: BorderSide(
-                                color: Colors.transparent,
-                                width: 0,
-                              )),
-                          contentPadding: const EdgeInsets.all(12),
-                          suffixIcon: ClipRRect(
-                              borderRadius: BorderRadius.circular(50),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                    color: isListening
-                                        ? Colors.blue
-                                        : Colors.transparent),
-                                child: IconButton(
-                                  onPressed: () {
-                                    if (isListening) {
-                                      stopListening();
-                                    } else {
-                                      startListening();
-                                    }
-                                  },
-                                  icon: Icon(Icons.mic),
-                                  color: Colors.white,
-                                ),
-                              ))),
-                      style: TextStyle(color: Colors.white),
+                        )),
+                    SizedBox(
+                      width: 5,
                     ),
-                  ),
-                ),
-                SizedBox(
-                  width: 5,
-                ),
-                ClipRRect(
-                    borderRadius: BorderRadius.all(Radius.circular(50)),
-                    child: AnimatedContainer(
-                      duration: Duration(milliseconds: 200),
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                          color: !isGeneratingResponse
-                              ? prompt.isEmpty
-                                  ? Colors.grey
-                                  : Colors.white
-                              : Colors.white),
-                      child: IconButton(
-                        onPressed: () {
-                          if (!isGeneratingResponse) {
-                            if (prompt.isEmpty) return;
-                            FocusScope.of(context).unfocus();
-                            log("Sending message $prompt");
-                            sendMessage();
-                          } else {
-                            stopSocketGeneration();
-                          }
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width *
+                              0.6, // Max 60% de largeur
+                          maxHeight: 200),
+                      child: TextField(
+                        cursorColor: Colors.white60,
+                        controller: _textController,
+                        maxLines: null,
+                        onChanged: (value) {
+                          setState(() {
+                            prompt = value;
+                          });
                         },
-                        icon: !isGeneratingResponse
-                            ? Icon(Icons.arrow_upward)
-                            : Icon(Icons.square_rounded),
-                        color: !isGeneratingResponse
-                            ? prompt.isEmpty
-                                ? const Color.fromARGB(246, 47, 47, 47)
-                                : const Color.fromARGB(239, 0, 0, 0)
-                            : const Color.fromARGB(213, 0, 0, 0),
+                        decoration: InputDecoration(
+                            hintText: "Message Sauraya",
+                            hintStyle: TextStyle(
+                              color: Colors.white70,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(30)),
+                                borderSide: BorderSide(
+                                  color: Colors.transparent,
+                                  width: 0,
+                                )),
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(30)),
+                                borderSide: BorderSide(
+                                  color: Colors.transparent,
+                                  width: 0,
+                                )),
+                            filled: true,
+                            fillColor: Color(0XFF252525),
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(30)),
+                                borderSide: BorderSide(
+                                  color: Colors.transparent,
+                                  width: 0,
+                                )),
+                            contentPadding: const EdgeInsets.all(12),
+                            suffixIcon: ClipRRect(
+                                borderRadius: BorderRadius.circular(50),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                      color: isListening
+                                          ? Colors.blue
+                                          : Colors.transparent),
+                                  child: IconButton(
+                                    onPressed: () {
+                                      if (isListening) {
+                                        stopListening();
+                                      } else {
+                                        startListening();
+                                      }
+                                    },
+                                    icon: Icon(Icons.mic),
+                                    color: Colors.white,
+                                  ),
+                                ))),
+                        style: TextStyle(color: Colors.white),
                       ),
-                    )),
-              ],
-            ),
-          )
+                    ),
+                    SizedBox(
+                      width: 5,
+                    ),
+                    ClipRRect(
+                        borderRadius: BorderRadius.all(Radius.circular(50)),
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: 200),
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                              color: !isGeneratingResponse
+                                  ? prompt.isEmpty
+                                      ? Colors.grey
+                                      : Colors.white
+                                  : Colors.white),
+                          child: IconButton(
+                            onPressed: () {
+                              if (!isGeneratingResponse) {
+                                if (prompt.isEmpty) return;
+                                FocusScope.of(context).unfocus();
+                                log("Sending message $prompt");
+                                sendMessage();
+                              } else {
+                                stopSocketGeneration();
+                              }
+                            },
+                            icon: !isGeneratingResponse
+                                ? Icon(Icons.arrow_upward)
+                                : Icon(Icons.square_rounded),
+                            color: !isGeneratingResponse
+                                ? prompt.isEmpty
+                                    ? const Color.fromARGB(246, 47, 47, 47)
+                                    : const Color.fromARGB(239, 0, 0, 0)
+                                : const Color.fromARGB(213, 0, 0, 0),
+                          ),
+                        )),
+                  ],
+                ),
+              )),
+          if (_isPlaying || isAudioLoading)
+            Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.12,
+                right: MediaQuery.of(context).size.width * 0.08,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(50),
+                  onTap: () {
+                    log("Audio player clicked");
+                    setState(() {
+                      if (_isPlaying) {
+                        stopPlaying();
+                      } else {
+                        if (messages.isNotEmpty) {
+                          readResponse(messages[messages.length - 1].content);
+                        }
+                      }
+                    });
+                  },
+                  child: AudioPlayerWidget(
+                    isAudioLoading: isAudioLoading,
+                    isPlaying: _isPlaying,
+                    totalDuration: _duration,
+                    currentPosition: _position,
+                  ),
+                ))
         ],
       ),
     );

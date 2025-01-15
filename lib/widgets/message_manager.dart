@@ -20,7 +20,7 @@ class MessageManager extends StatelessWidget {
   final Color primaryColor;
   final Color secondaryColor;
   final Color darkbgColor;
-  final Function readResponse ;
+  final Function readResponse;
 
   const MessageManager({
     Key? key,
@@ -44,7 +44,7 @@ class MessageManager extends StatelessWidget {
         onLongPress: () async {
           final result = await showMenu(
               context: context,
-              position: RelativeRect.fromLTRB(50, 400, 100,100),
+              position: RelativeRect.fromLTRB(50, 400, 100, 100),
               color: Color(0XFF212121),
               items: [
                 PopupMenuItem(
@@ -89,13 +89,14 @@ class MessageManager extends StatelessWidget {
                       ],
                     )),
               ]);
-             if (result == "listen") {
-               readResponse(msg);
-             }
+          if (result == "listen") {
+            readResponse(msg);
+          }
         },
         child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.only(top: 5, bottom: 70),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth:
@@ -105,6 +106,7 @@ class MessageManager extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min, // Adapte la taille au contenu
                 crossAxisAlignment:
                     CrossAxisAlignment.start, // Aligne les éléments en haut
+
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(75),
@@ -115,6 +117,7 @@ class MessageManager extends StatelessWidget {
                       height: 35,
                     ),
                   ),
+
                   const SizedBox(
                       width: 10), // Espacement entre l'image et le texte
                   Expanded(

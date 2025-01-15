@@ -48,6 +48,8 @@ dependencies:
   permission_handler: ^11.0.0
   http: ^1.0.0
   audioplayers: ^6.1.0
+  just_audio: ^0.9.43
+  flutter_spinkit: ^5.2.1
 
 
 dev_dependencies:

@@ -28,7 +28,11 @@ class CustomButton extends StatelessWidget {
             padding: const EdgeInsets.all(10.0),
             child: Row(
               children: [
-                Icon(icon, color: color),
+                Icon(
+                  icon,
+                  color: color,
+                  size: 18,
+                ),
                 SizedBox(width: 8.0),
                 Text(
                   text,

@@ -1,53 +1,51 @@
+import 'dart:core';
+
 String removeMarkdown(String markdown) {
-  // Replace bold text with plain text
-  markdown = markdown.replaceAll(RegExp(r'\*\*(.+?)\*\*'), '');
-  markdown = markdown.replaceAll(RegExp('__(.+?)__'), '');
+  // Remove headers (e.g., # Header, ## Subheader)
+  String result = markdown.replaceAll(RegExp(r'(^|\n)#+\s+'), '\n');
 
-  // Replace italicized text with plain text
-  markdown = markdown.replaceAll(RegExp('_(.+?)_'), '');
-  markdown = markdown.replaceAll(RegExp(r'\*(.+?)\*'), '');
+  // Remove links [text](url) and [text](url "title")
+  result = result.replaceAll(RegExp(r'\[.*?\]\(.*?(\s+".*?")?\)'), '');
 
-  // Replace strikethrough text with plain text
-  markdown = markdown.replaceAll(RegExp('~~(.+?)~~'), '');
+  // Remove images ![alt text](url)
+  result = result.replaceAll(RegExp(r'!\[.*?\]\(.*?\)'), '');
 
-  // Replace inline code blocks with plain text
-  markdown = markdown.replaceAll(RegExp('`(.+?)`'), '');
+  // Remove inline code `code`
+  result = result.replaceAll(RegExp(r'`.*?`'), '');
 
-  // Replace code blocks with plain text
-  markdown =
-      markdown.replaceAll(RegExp(r'```[\s\S]*?```', multiLine: true), '');
-  markdown =
-      markdown.replaceAll(RegExp(r'```[\s\S]*?```', multiLine: true), '');
+  // Remove code blocks ```code``` and indented code blocks
+  result = result.replaceAll(RegExp(r'```[\s\S]*?```'), '');
+  result = result.replaceAll(RegExp(r'(\n|^) {4}.*'), '');
 
-  // Remove links
-  markdown = markdown.replaceAll(RegExp(r'\[(.+?)\]\((.+?)\)'), '');
+  // Remove bold, italic, and strikethrough (**text**, *text*, ~~text~~)
+  result = result.replaceAll(RegExp(r'(\*\*|\*|~~)(.*?)\1'), '');
 
-  // Remove images
-  markdown = markdown.replaceAll(RegExp(r'!\[(.+?)\]\((.+?)\)'), '');
+  // Remove blockquotes > text
+  result = result.replaceAll(RegExp(r'(^|\n)>\s+.*'), '');
 
-  // Remove headings
-  markdown =
-      markdown.replaceAll(RegExp(r'^#+\s+(.+?)\s*$', multiLine: true), '');
-  markdown = markdown.replaceAll(RegExp(r'^\s*=+\s*$', multiLine: true), '');
-  markdown = markdown.replaceAll(RegExp(r'^\s*-+\s*$', multiLine: true), '');
+  // Remove lists (e.g., - Item, * Item, 1. Item)
+  result = result.replaceAll(RegExp(r'(^|\n)([-*]|\d+\.)\s+'), '\n');
 
-  // Remove blockquotes
-  markdown =
-      markdown.replaceAll(RegExp(r'^\s*>\s+(.+?)\s*$', multiLine: true), '');
+  // Remove horizontal rules (---, ***, etc.)
+  result = result.replaceAll(RegExp(r'(^|\n)(---|\*\*\*|___)(\n|$)'), '\n');
 
-  // Remove lists
-  markdown = markdown.replaceAll(
-    RegExp(r'^\s*[\*\+-]\s+(.+?)\s*$', multiLine: true),
-    '',
-  );
-  markdown = markdown.replaceAll(
-    RegExp(r'^\s*\d+\.\s+(.+?)\s*$', multiLine: true),
-    '',
-  );
+  // Remove tables | Header | and rows
+  result = result.replaceAll(RegExp(r'(^|\n)\|.*?\|'), '\n');
 
-  // Remove horizontal lines
-  markdown =
-      markdown.replaceAll(RegExp(r'^\s*[-*_]{3,}\s*$', multiLine: true), '');
+  // Remove any leftover special characters
+  result = result.replaceAll(RegExp(r'[\*_`>\[\](){}#+\-|~]'), '');
 
-  return markdown;
+  // Trim extra whitespace
+  result = result.trim();
+
+  return result;
+}
+
+String removeEmojis(String textWithEmojis) {
+  // Remove emojis using regex
+  String result = textWithEmojis.replaceAll(
+      RegExp(r'(?:\p{Emoji}(?:\p{Emoji_Modifier}|\uFE0F)?(?:\u200D\p{Emoji})*)',
+          unicode: true),
+      '');
+  return result;
 }
