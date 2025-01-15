@@ -12,6 +12,7 @@ import 'package:sauraya/widgets/audio_player.dart';
 import 'package:sauraya/widgets/custom_app_bar.dart';
 import 'package:sauraya/widgets/message_manager.dart';
 import 'package:sauraya/widgets/options_button.dart';
+import 'package:sauraya/widgets/overlay_message.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -40,6 +41,7 @@ Duration _position = Duration.zero;
 bool _isPlaying = false;
 int currentNumberOfResponse = 0;
 bool isAudioLoading = false;
+bool isExec = false ;
 
 AudioPlayer audioPlayer = AudioPlayer();
 
@@ -58,6 +60,59 @@ class _ChatScreenState extends State<ChatScreen> {
       log("error during stop socket generation $e");
       showCustomSnackBar(
           context: context, message: "error during stop socket generation $e");
+    }
+  }
+
+  Future<String> getOutput(String codeToExecute) async {
+    try {
+       setState(() {
+        isExec = true;
+       });
+      log("Executing code...");
+      String code = codeToExecute.trim();
+      final url = "https://python.sauraya.com/execute";
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"code": code}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        setState(() {
+          isExec = false;
+        });
+
+        if (responseBody["error"] != null) {
+          return responseBody["details"] ?? "Unknown error occurred.";
+        } else {
+          return responseBody["result"] ?? "No output found.";
+        }
+      } else {
+        final error =
+            "An error occurred: ${response.statusCode} - ${response.body}";
+             setState(() {
+          isExec = false;
+        });
+        return error;
+       
+      }
+    } catch (e) {
+       setState(() {
+          isExec = false;
+        });
+      return "An exception occurred: $e";
+    }
+  }
+
+  Future<void> executePythonCode(String codeToExecute) async {
+    try {
+      final result = await getOutput(codeToExecute);
+
+      showOutPut(context, result, isExec);
+    } catch (e) {
+      log("An error occured $e");
     }
   }
 
@@ -183,11 +238,17 @@ class _ChatScreenState extends State<ChatScreen> {
         logError("The server is not connected");
         return;
       }
+      Message sysMessage = Message(role: "system", content: systemMessage);
+      
+      Messages lastMessages = [...messages];
 
-      final lastMessages = [...messages];
+      if (lastMessages.isEmpty) {
+        lastMessages.add(sysMessage);
+      }
       Message newMessage = Message(role: "user", content: prompt);
       lastMessages.add(newMessage);
       log("New message added");
+
       setState(() {
         messages = lastMessages;
         prompt = "";
@@ -195,7 +256,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
         _textController.clear();
 
-        if (messages.length > 1) {
+        if (messages.length > 2) {
           _messagesScrollController.animateTo(
             _messagesScrollController.position.maxScrollExtent,
             duration: Duration(milliseconds: 300),
@@ -246,7 +307,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void connectToSocket() {
     try {
       log("Connecting to the server...");
-      final server = "http://185.97.144.209:7000";
+      final server = "http://46.202.175.219:7000";
       IO.Socket io = IO.io(
           server, IO.OptionBuilder().setTransports(["websocket"]).build());
       setState(() {
@@ -442,7 +503,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                 text: "Teach me",
                                 color: Colors.green,
                                 onTap: () {
-                                  log("Teach element clicked");
                                 }),
                             CustomButton(
                               color: Colors.pink,
@@ -468,6 +528,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         itemCount: messages.length,
                         itemBuilder: (BuildContext context, int i) {
                           return MessageManager(
+                            isExec: isExec,
+                            executePythonCode: executePythonCode,
+                            isGeneratingResponse: isGeneratingResponse,
                             readResponse: readResponse,
                             messages: messages,
                             index: i,

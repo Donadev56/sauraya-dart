@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
@@ -12,6 +15,8 @@ import 'package:sauraya/widgets/code_custom_style.dart';
 import 'package:sauraya/widgets/styleSheet_widget.dart';
 import 'package:markdown/markdown.dart' as md;
 
+typedef ExecutePythonCode = Future<void> Function(String codeToExecute);
+
 class MessageManager extends StatelessWidget {
   final Messages messages;
   final int index;
@@ -19,6 +24,9 @@ class MessageManager extends StatelessWidget {
   final Color secondaryColor;
   final Color darkbgColor;
   final Function readResponse;
+  final bool isGeneratingResponse;
+  final ExecutePythonCode executePythonCode;
+  final bool isExec;
 
   const MessageManager({
     Key? key,
@@ -28,6 +36,9 @@ class MessageManager extends StatelessWidget {
     required this.secondaryColor,
     required this.darkbgColor,
     required this.readResponse,
+    required this.isGeneratingResponse,
+    required this.executePythonCode,
+    required this.isExec,
   }) : super(key: key);
 
   @override
@@ -129,7 +140,11 @@ class MessageManager extends StatelessWidget {
                       styleSheet: MarkdownCustomStyle.customStyle,
                       builders: {
                         'code': CodeElementBuilder(
-                            textColor: secondaryColor, context: context),
+                          isExec: isExec,
+                            executePythonCode: executePythonCode,
+                            textColor: secondaryColor,
+                            context: context,
+                            isGeneratingResponse: isGeneratingResponse),
                       },
                     ),
                   ),
@@ -172,27 +187,41 @@ class MessageManager extends StatelessWidget {
 class CodeElementBuilder extends MarkdownElementBuilder {
   final Color textColor;
   final BuildContext context;
+  final bool isGeneratingResponse;
+  final ExecutePythonCode executePythonCode;
+  final bool isExec ;
 
   CodeElementBuilder({
     required this.textColor,
     required this.context,
+    required this.isGeneratingResponse,
+    required this.executePythonCode,
+    required this.isExec
   });
 
   @override
   Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
     String language = 'plaintext';
+    bool isPython = language == "python";
+
     if (element.attributes.containsKey('class')) {
       final className = element.attributes['class'];
       if (className != null && className.startsWith('language-')) {
         language = className.substring(9);
+        isPython = language == 'python';
         log('language : $language');
       }
     }
 
-    return Column(
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0XFF191919),
+      ),
+      child: Column(
       children: [
         Container(
           padding: const EdgeInsets.only(left: 15),
+          
           decoration: BoxDecoration(
             color: const Color(0XFF191919),
           ),
@@ -203,21 +232,35 @@ class CodeElementBuilder extends MarkdownElementBuilder {
                 style: TextStyle(color: Colors.white60),
               ),
               Spacer(),
-              IconButton(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: element.textContent))
-                      .then((_) {
-                    showCustomSnackBar(
-                        context: context,
-                        message: "Copied",
-                        backgroundColor: Color(0XFF0D0D0D),
-                        icon: Icons.check_circle,
-                        iconColor: Colors.greenAccent);
-                  });
-                },
-                icon: Icon(FeatherIcons.copy),
-                color: Colors.white60,
-              )
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Clipboard.setData(
+                              ClipboardData(text: element.textContent))
+                          .then((_) {
+                        showCustomSnackBar(
+                            context: context,
+                            message: "Copied",
+                            backgroundColor: Color(0XFF0D0D0D),
+                            icon: Icons.check_circle,
+                            iconColor: Colors.greenAccent);
+                      });
+                    },
+                    icon: Icon(FeatherIcons.copy),
+                    color: Colors.white60,
+                  ),
+                  if (isPython)
+                    IconButton(
+                        onPressed: () {
+                          executePythonCode(element.textContent);
+                        },
+                        icon: Icon(
+                         isExec ? FeatherIcons.loader : FeatherIcons.terminal,
+                          color: Colors.white60,
+                        ))
+                ],
+              ),
             ],
           ),
         ),
@@ -230,8 +273,12 @@ class CodeElementBuilder extends MarkdownElementBuilder {
             padding: const EdgeInsets.all(8),
             textStyle: TextStyle(color: textColor),
           ),
-        )
+        ),
+        SizedBox(
+          height: 20,
+        ),
       ],
-    );
+    ),
+    ) ;
   }
 }
