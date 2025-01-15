@@ -369,6 +369,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _textController.dispose();
     _messagesScrollController.dispose();
+    audioPlayer.stop();
     audioPlayer.dispose();
     super.dispose();
   }

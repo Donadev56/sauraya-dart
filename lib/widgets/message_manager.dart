@@ -139,13 +139,21 @@ class MessageManager extends StatelessWidget {
     }
     if (isUser) {
       return Align(
+        
         alignment: Alignment.topRight,
-        child: ConstrainedBox(
+        child:Container(
+     margin:messages.length == index +1 ? const EdgeInsets.only(top: 5, bottom: 70):  const EdgeInsets.all(0) ,
+
+        child:
+
+         ConstrainedBox(
+          
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.85,
           ),
           child: Container(
             margin: const EdgeInsets.all(5),
+
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(Radius.circular(15)),
@@ -157,7 +165,7 @@ class MessageManager extends StatelessWidget {
             ),
           ),
         ),
-      );
+      ));
     } else {
       return Container();
     }
