@@ -63,6 +63,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void readResponse(String markdown) async {
     try {
+      setState(() {
+        isAudioLoading = true;
+      });
      
       final textWithEmojis = removeMarkdown(markdown);
       final text = removeEmojis(textWithEmojis);
@@ -83,18 +86,25 @@ class _ChatScreenState extends State<ChatScreen> {
         final audioBytes = response.bodyBytes;
         playAudio(audioBytes);
       } else {
-        log("Error converting text: $response.body");
+        log("Error converting text");
+          setState(() {
+      isAudioLoading = false;
+
+      });
         showCustomSnackBar(
             context: context,
-            message: "Error converting text: $response.body",
+            message: "Error converting text",
             iconColor: Colors.pinkAccent);
         return;
       }
     } catch (e) {
       log(e as String);
-     
+      setState(() {
+      isAudioLoading = false;
+
+      });
       showCustomSnackBar(
-          context: context, message: "error during read response $e");
+          context: context, message: "error during read response");
     }
   }
 
