@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
-import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/types/types.dart';
 
 typedef LoadConvType = Future Function(String convId);

@@ -165,13 +165,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
       final savedConversations =
           await manager.getSavedConversations(userId, keyToUse);
+
       if (savedConversations != null) {
         setState(() {
           conversations.conversations.addAll(savedConversations.conversations);
 
           log("Conversations initialized");
         });
-        log("Conversations ${conversations.toJson().toString()}");
+        log("Conversations found : ${conversations.conversations.values.length}");
       } else {
         log("No conversation found");
       }
@@ -754,7 +755,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Center(
                     child: ListView.builder(
                         controller: _messagesScrollController,
-                        padding: const EdgeInsets.all(10),
                         itemCount: messages.length,
                         itemBuilder: (BuildContext context, int i) {
                           return MessageManager(

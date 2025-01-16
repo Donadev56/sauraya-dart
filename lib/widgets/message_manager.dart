@@ -1,15 +1,13 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/types/types.dart';
+import 'package:sauraya/utils/remove_markdown.dart';
 import 'package:sauraya/utils/snackbar_manager.dart';
 import 'package:sauraya/widgets/code_custom_style.dart';
 import 'package:sauraya/widgets/styleSheet_widget.dart';
@@ -49,7 +47,6 @@ class MessageManager extends StatelessWidget {
 
     if (isAssistant) {
       return InkWell(
-        borderRadius: BorderRadius.circular(20),
         onLongPress: () async {
           final result = await showMenu(
               context: context,
@@ -100,6 +97,16 @@ class MessageManager extends StatelessWidget {
               ]);
           if (result == "listen") {
             readResponse(msg);
+          } else if (result == "copy") {
+            final msgWihoutMarkdown = removeMarkdown(msg);
+            Clipboard.setData(ClipboardData(text: msgWihoutMarkdown)).then((_) {
+              showCustomSnackBar(
+                  context: context,
+                  message: "Copied",
+                  backgroundColor: Color(0XFF0D0D0D),
+                  icon: Icons.check_circle,
+                  iconColor: Colors.greenAccent);
+            });
           }
         },
         child: AnimatedContainer(
@@ -159,24 +166,35 @@ class MessageManager extends StatelessWidget {
           child: Container(
             margin: messages.length == index + 1
                 ? const EdgeInsets.only(top: 5, bottom: 70)
-                : const EdgeInsets.all(0),
+                : const EdgeInsets.all(5),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.85,
-              ),
-              child: Container(
-                margin: const EdgeInsets.all(5),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(15)),
-                  color: darkbgColor,
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.85,
                 ),
-                child: Text(
-                  msg,
-                  style: TextStyle(color: secondaryColor),
-                ),
-              ),
-            ),
+                child: InkWell(
+                  onLongPress: () {
+                    Clipboard.setData(ClipboardData(text: msg)).then((_) {
+                      showCustomSnackBar(
+                          context: context,
+                          message: "Copied",
+                          backgroundColor: Color(0XFF0D0D0D),
+                          icon: Icons.check_circle,
+                          iconColor: Colors.greenAccent);
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.all(5),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.all(Radius.circular(15)),
+                      color: darkbgColor,
+                    ),
+                    child: Text(
+                      msg,
+                      style: TextStyle(color: secondaryColor),
+                    ),
+                  ),
+                )),
           ));
     } else {
       return Container();

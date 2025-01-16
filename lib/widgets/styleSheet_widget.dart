@@ -10,37 +10,37 @@ class MarkdownCustomStyle {
     return MarkdownStyleSheet(
       h1: TextStyle(
           color: Colors.white,
-          fontSize: 30,
+          fontSize: 32,
           fontWeight: FontWeight.bold,
           fontStyle: FontStyle.italic),
       h2: TextStyle(
           color: const Color.fromARGB(227, 255, 255, 255),
-          fontSize: 26,
+          fontSize: 30,
           fontWeight: FontWeight.w700,
           fontStyle: FontStyle.italic),
       h3: TextStyle(
         color: const Color.fromARGB(227, 255, 255, 255),
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: FontWeight.w600,
       ),
       h4: TextStyle(
           color: const Color.fromARGB(227, 255, 255, 255),
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: FontWeight.w500,
           fontStyle: FontStyle.italic),
       h5: TextStyle(
         color: Colors.white,
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: FontWeight.w500,
       ),
       h6: TextStyle(
         color: Colors.white,
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: FontWeight.w400,
       ),
       p: const TextStyle(
-        color: Color.fromARGB(196, 255, 255, 255),
-        fontSize: 14,
+        color: Color.fromARGB(237, 255, 255, 255),
+        fontSize: 15,
       ),
       strong: const TextStyle(
         fontWeight: FontWeight.bold,
