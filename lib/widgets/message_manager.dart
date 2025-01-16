@@ -140,7 +140,7 @@ class MessageManager extends StatelessWidget {
                       styleSheet: MarkdownCustomStyle.customStyle,
                       builders: {
                         'code': CodeElementBuilder(
-                          isExec: isExec,
+                            isExec: isExec,
                             executePythonCode: executePythonCode,
                             textColor: secondaryColor,
                             context: context,
@@ -189,15 +189,14 @@ class CodeElementBuilder extends MarkdownElementBuilder {
   final BuildContext context;
   final bool isGeneratingResponse;
   final ExecutePythonCode executePythonCode;
-  final bool isExec ;
+  final bool isExec;
 
-  CodeElementBuilder({
-    required this.textColor,
-    required this.context,
-    required this.isGeneratingResponse,
-    required this.executePythonCode,
-    required this.isExec
-  });
+  CodeElementBuilder(
+      {required this.textColor,
+      required this.context,
+      required this.isGeneratingResponse,
+      required this.executePythonCode,
+      required this.isExec});
 
   @override
   Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
@@ -218,67 +217,69 @@ class CodeElementBuilder extends MarkdownElementBuilder {
         color: const Color(0XFF191919),
       ),
       child: Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.only(left: 15),
-          
-          decoration: BoxDecoration(
-            color: const Color(0XFF191919),
-          ),
-          child: Row(
-            children: [
-              Text(
-                language,
-                style: TextStyle(color: Colors.white60),
-              ),
-              Spacer(),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      Clipboard.setData(
-                              ClipboardData(text: element.textContent))
-                          .then((_) {
-                        showCustomSnackBar(
-                            context: context,
-                            message: "Copied",
-                            backgroundColor: Color(0XFF0D0D0D),
-                            icon: Icons.check_circle,
-                            iconColor: Colors.greenAccent);
-                      });
-                    },
-                    icon: Icon(FeatherIcons.copy),
-                    color: Colors.white60,
-                  ),
-                  if (isPython)
+        children: [
+          Container(
+            padding: const EdgeInsets.only(left: 15),
+            decoration: BoxDecoration(
+              color: const Color(0XFF191919),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  language,
+                  style: TextStyle(color: Colors.white60),
+                ),
+                Spacer(),
+                Row(
+                  children: [
                     IconButton(
-                        onPressed: () {
-                          executePythonCode(element.textContent);
-                        },
-                        icon: Icon(
-                         isExec ? FeatherIcons.loader : FeatherIcons.terminal,
-                          color: Colors.white60,
-                        ))
-                ],
-              ),
-            ],
+                      onPressed: () {
+                        Clipboard.setData(
+                                ClipboardData(text: element.textContent))
+                            .then((_) {
+                          showCustomSnackBar(
+                              context: context,
+                              message: "Copied",
+                              backgroundColor: Color(0XFF0D0D0D),
+                              icon: Icons.check_circle,
+                              iconColor: Colors.greenAccent);
+                        });
+                      },
+                      icon: Icon(FeatherIcons.copy),
+                      color: Colors.white60,
+                    ),
+                    if (isPython)
+                      IconButton(
+                          onPressed: () {
+                            executePythonCode(element.textContent);
+                          },
+                          icon: Icon(
+                            isExec
+                                ? FeatherIcons.loader
+                                : FeatherIcons.terminal,
+                            color: Colors.white60,
+                          ))
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: HighlightView(
-            element.textContent,
-            language: language,
-            theme: VsCode,
-            padding: const EdgeInsets.all(8),
-            textStyle: TextStyle(color: textColor),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: HighlightView(
+              element.textContent,
+              language: language,
+              theme: VsCode,
+              padding: const EdgeInsets.all(8),
+              textStyle: TextStyle(color: textColor),
+            ),
           ),
-        ),
-        SizedBox(
-          height: 20,
-        ),
-      ],
-    ),
-    ) ;
+          SizedBox(
+            height: 20,
+          ),
+        ],
+      ),
+    );
   }
 }

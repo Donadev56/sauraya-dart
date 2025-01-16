@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../logger/logger.dart';
 
 class TopBar extends StatelessWidget implements PreferredSizeWidget {
@@ -17,15 +18,16 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       surfaceTintColor: primaryColor,
       backgroundColor: primaryColor,
+      titleSpacing: 0,
+      leading: IconButton(
+        onPressed: () {
+          Scaffold.of(context).openDrawer();
+        },
+        icon: Icon(FeatherIcons.alignLeft),
+        color: secondaryColor,
+      ),
       title: Row(
         children: [
-          IconButton(
-            onPressed: () {
-              log("Element clicked");
-            },
-            icon: Icon(FeatherIcons.alignLeft),
-            color: secondaryColor,
-          ),
           TextButton(
             onPressed: () {
               log("Text button clicked");

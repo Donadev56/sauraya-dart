@@ -4,8 +4,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/logger/logger.dart';
+import 'package:sauraya/service/crypto.dart';
+import 'package:sauraya/service/secure_storage.dart';
 import 'package:sauraya/types/enums.dart';
 import 'package:sauraya/types/types.dart';
+import 'package:sauraya/utils/id_generator.dart';
 import 'package:sauraya/utils/remove_markdown.dart';
 import 'package:sauraya/utils/snackbar_manager.dart';
 import 'package:sauraya/widgets/audio_player.dart';
@@ -13,11 +16,13 @@ import 'package:sauraya/widgets/custom_app_bar.dart';
 import 'package:sauraya/widgets/message_manager.dart';
 import 'package:sauraya/widgets/options_button.dart';
 import 'package:sauraya/widgets/overlay_message.dart';
+import 'package:sauraya/widgets/sidebar_custom.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:sauraya/service/data_saver.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -41,7 +46,13 @@ Duration _position = Duration.zero;
 bool _isPlaying = false;
 int currentNumberOfResponse = 0;
 bool isAudioLoading = false;
-bool isExec = false ;
+bool isExec = false;
+
+String userId = "DonaDev";
+String conversationId = "";
+String conversationTitle = "";
+
+Conversations conversations = Conversations(conversations: {});
 
 AudioPlayer audioPlayer = AudioPlayer();
 
@@ -65,9 +76,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<String> getOutput(String codeToExecute) async {
     try {
-       setState(() {
+      setState(() {
         isExec = true;
-       });
+      });
       log("Executing code...");
       String code = codeToExecute.trim();
       final url = "https://python.sauraya.com/execute";
@@ -92,17 +103,115 @@ class _ChatScreenState extends State<ChatScreen> {
       } else {
         final error =
             "An error occurred: ${response.statusCode} - ${response.body}";
-             setState(() {
+        setState(() {
           isExec = false;
         });
         return error;
-       
       }
     } catch (e) {
-       setState(() {
-          isExec = false;
-        });
+      setState(() {
+        isExec = false;
+      });
       return "An exception occurred: $e";
+    }
+  }
+
+  Future<void> updateMessages() async {
+    try {
+      ConversationManager manager = ConversationManager();
+      SecureStorageService service = SecureStorageService();
+
+      String keyToUse = "";
+      final savedkey = await service.loadPrivateKey(userId);
+
+      if (savedkey != null) {
+        keyToUse = savedkey;
+      } else {
+        keyToUse = await generateSecureKey(32);
+        await service.savePrivateKey(keyToUse, userId);
+      }
+
+      final messageToUpdate = [...messages];
+      String convId;
+      String firstMessageText = messageToUpdate[0].content;
+      String currentTitle =
+          conversationTitle.isEmpty ? firstMessageText : conversationTitle;
+
+      if (messageToUpdate.isEmpty) {
+        log("No messages to update");
+        return;
+      }
+      if (conversationId.isEmpty) {
+        convId = generateUUID();
+      } else {
+        convId = conversationId;
+      }
+      Conversation conversationToSave = Conversation(
+          messages: messageToUpdate, id: convId, title: currentTitle);
+      Conversations newConversations = conversations;
+      newConversations.conversations[convId] = conversationToSave;
+      manager.saveConversations(keyToUse, newConversations, userId);
+      setState(() {
+        if (conversationId.isEmpty) {
+          conversationId = convId;
+        }
+        if (conversationTitle.isEmpty) {
+          conversationTitle = currentTitle;
+        }
+        conversations = newConversations;
+      });
+      log("Conversations saved and updated");
+    } catch (e) {
+      log("an error occured $e");
+    }
+  }
+
+  Future<void> getConversations() async {
+    try {
+      ConversationManager manager = ConversationManager();
+      SecureStorageService service = SecureStorageService();
+
+      String keyToUse = "";
+      final savedkey = await service.loadPrivateKey(userId);
+
+      if (savedkey != null) {
+        keyToUse = savedkey;
+      } else {
+        keyToUse = await generateSecureKey(32);
+        await service.savePrivateKey(keyToUse, userId);
+      }
+
+      final savedConversations =
+          await manager.getSavedConversations(userId, keyToUse);
+      if (savedConversations != null) {
+        setState(() {
+          conversations.conversations.addAll(savedConversations.conversations);
+
+          log("Conversations initialized");
+        });
+        log("Conversations ${conversations.toJson().toString()}");
+      } else {
+        log("No conversation found");
+      }
+    } catch (e) {
+      log("Error during get conversations $e");
+    }
+  }
+
+  Future<void> loadConversation(String convId) async {
+    try {
+      setState(() {
+        final conv = conversations.conversations[convId];
+        if (conv != null) {
+          conversationId = convId;
+          conversationTitle = conv.title;
+          messages = conv.messages;
+        }
+      });
+    } catch (e) {
+      log("Error during get conversations $e");
+      showCustomSnackBar(
+          context: context, message: "Error during get conversations ");
     }
   }
 
@@ -239,7 +348,7 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
       Message sysMessage = Message(role: "system", content: systemMessage);
-      
+
       Messages lastMessages = [...messages];
 
       if (lastMessages.isEmpty) {
@@ -313,12 +422,20 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         socket = io;
       });
+
       io.onConnect((_) {
         log("Connected to the server $server");
       });
+      io.on(SocketEvents.titleFound, (newTitle) {
+        log("New title: $newTitle");
+        String foundTitle = newTitle["title"];
+        if (foundTitle.isNotEmpty) {
+          setState(() {
+            conversationTitle = foundTitle;
+          });
+        }
+      });
       io.on(SocketEvents.partialResponse, (data) {
-        log("New data received $data");
-
         io.on(SocketEvents.error, (error) {
           logError("Error received $error");
           showCustomSnackBar(
@@ -399,6 +516,7 @@ class _ChatScreenState extends State<ChatScreen> {
             currentNumberOfResponse = 0;
           });
           readResponse(newText);
+          updateMessages();
         }
       });
       io.onDisconnect((_) {
@@ -434,6 +552,7 @@ class _ChatScreenState extends State<ChatScreen> {
     connectToSocket();
 
     _initSpeech();
+    getConversations();
     audioPlayer.onDurationChanged.listen((duration) {
       setState(() {
         _duration = duration;
@@ -460,6 +579,49 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: primaryColor,
       appBar:
           TopBar(primaryColor: primaryColor, secondaryColor: secondaryColor),
+      drawer: SideBard(
+        conversations: conversations,
+        onTap: () async {
+          final result = await showMenu(
+              context: context,
+              position: RelativeRect.fromLTRB(50, 400, 100, 100),
+              color: Color(0XFF212121),
+              items: [
+                PopupMenuItem(
+                    value: "remove",
+                    child: Row(
+                      children: [
+                        Icon(
+                          FeatherIcons.trash,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Text(
+                          "Remove",
+                          style: TextStyle(color: Colors.white70),
+                        )
+                      ],
+                    )),
+                PopupMenuItem(
+                    value: "edit",
+                    child: Row(
+                      children: [
+                        Icon(FeatherIcons.edit2, color: Colors.white),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Text("Edit title",
+                            style: TextStyle(color: Colors.white70))
+                      ],
+                    )),
+              ]);
+        },
+        onOpen: () {
+          log("opening conversation");
+        },
+      ),
       body: Stack(
         alignment: Alignment.center,
         children: [
@@ -502,8 +664,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 icon: FeatherIcons.bookOpen,
                                 text: "Teach me",
                                 color: Colors.green,
-                                onTap: () {
-                                }),
+                                onTap: () {}),
                             CustomButton(
                               color: Colors.pink,
                               icon: FontAwesomeIcons.brain,

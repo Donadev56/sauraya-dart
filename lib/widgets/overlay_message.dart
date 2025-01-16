@@ -47,28 +47,31 @@ void showOutPut(BuildContext context, String text, bool isExec) {
                           ],
                         ),
                         Spacer(),
-                      Row(
-                        children: [
-                           IconButton(
-                          onPressed: () {
-                            overlayEntry.remove();
-                          },
-                          icon: Icon(Icons.close),
-                        ),
-                        IconButton(onPressed: (){
-                            Clipboard.setData(
-                              ClipboardData(text: text))
-                          .then((_) {
-                        showCustomSnackBar(
-                            context: context,
-                            message: "Copied",
-                            backgroundColor: Color(0XFF0D0D0D),
-                            icon: Icons.check_circle,
-                            iconColor: Colors.greenAccent);
-                      });
-                        }, icon: isExec ? Icon(FeatherIcons.loader) : Icon(FeatherIcons.copy))
-                        ],
-                      ) 
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                overlayEntry.remove();
+                              },
+                              icon: Icon(Icons.close),
+                            ),
+                            IconButton(
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: text))
+                                      .then((_) {
+                                    showCustomSnackBar(
+                                        context: context,
+                                        message: "Copied",
+                                        backgroundColor: Color(0XFF0D0D0D),
+                                        icon: Icons.check_circle,
+                                        iconColor: Colors.greenAccent);
+                                  });
+                                },
+                                icon: isExec
+                                    ? Icon(FeatherIcons.loader)
+                                    : Icon(FeatherIcons.copy))
+                          ],
+                        )
                       ],
                     ),
                   ),

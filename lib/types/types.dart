@@ -140,3 +140,61 @@ class ChatResponse {
     };
   }
 }
+
+class Conversation {
+  final String title;
+  final String id;
+  final List<Message> messages;
+
+  Conversation({
+    required this.title,
+    required this.messages,
+    required this.id,
+  });
+
+  factory Conversation.fromJson(Map<String, dynamic> json) {
+    return Conversation(
+      title: json['title'],
+      id: json['id'],
+      messages: (json['messages'] as List)
+          .map((message) => Message.fromJson(message))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'id': id,
+      'messages': messages.map((message) => message.toJson()).toList(),
+    };
+  }
+}
+
+typedef ConversationsInterface = Map<String, Map<String, Conversation>>;
+
+class Conversations {
+  final Map<String, Conversation> conversations;
+
+  Conversations({required this.conversations});
+
+  factory Conversations.fromJson(Map<String, dynamic> json) {
+    return Conversations(
+      conversations: json.map(
+        (key, value) => MapEntry(
+          key,
+          Conversation.fromJson(value),
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return conversations.map(
+      (key, value) => MapEntry(
+        key,
+        value.toJson(),
+      ),
+    );
+  }
+}

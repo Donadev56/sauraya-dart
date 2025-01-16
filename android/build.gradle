@@ -40,7 +40,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.0' // Garder une version compatible avec Kotlin
+        classpath 'com.android.tools.build:gradle:8.2.1' // Garder une version compatible avec Kotlin
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version" // Utiliser la version définie
     }
 }
