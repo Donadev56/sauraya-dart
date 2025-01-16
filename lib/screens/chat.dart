@@ -119,17 +119,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> updateMessages() async {
     try {
       ConversationManager manager = ConversationManager();
-      SecureStorageService service = SecureStorageService();
 
-      String keyToUse = "";
-      final savedkey = await service.loadPrivateKey(userId);
-
-      if (savedkey != null) {
-        keyToUse = savedkey;
-      } else {
-        keyToUse = await generateSecureKey(32);
-        await service.savePrivateKey(keyToUse, userId);
-      }
+      String keyToUse = await getKey();
 
       final messageToUpdate = [...messages];
       String convId;
@@ -169,17 +160,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> getConversations() async {
     try {
       ConversationManager manager = ConversationManager();
-      SecureStorageService service = SecureStorageService();
 
-      String keyToUse = "";
-      final savedkey = await service.loadPrivateKey(userId);
-
-      if (savedkey != null) {
-        keyToUse = savedkey;
-      } else {
-        keyToUse = await generateSecureKey(32);
-        await service.savePrivateKey(keyToUse, userId);
-      }
+      String keyToUse = await getKey();
 
       final savedConversations =
           await manager.getSavedConversations(userId, keyToUse);
@@ -203,15 +185,76 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         final conv = conversations.conversations[convId];
         if (conv != null) {
+          messages = conv.messages;
           conversationId = convId;
           conversationTitle = conv.title;
-          messages = conv.messages;
+          isGeneratingResponse = false;
+          isExec = false;
+          isListening = false;
+          currentNumberOfResponse = 0;
+          _isPlaying = false;
+          prompt = "";
+          _textController.text = "";
+          audioPlayer.stop();
         }
       });
     } catch (e) {
       log("Error during get conversations $e");
       showCustomSnackBar(
           context: context, message: "Error during get conversations ");
+    }
+  }
+
+  void startNewConversation() {
+    try {
+      setState(() {
+        conversationId = "";
+        conversationTitle = "";
+        messages = [];
+        isGeneratingResponse = false;
+        isExec = false;
+
+        isListening = false;
+        currentNumberOfResponse = 0;
+        _isPlaying = false;
+        prompt = "";
+        _textController.text = "";
+        audioPlayer.stop();
+      });
+    } catch (e) {
+      log("Error while starting new conversation $e");
+      showCustomSnackBar(
+          context: context, message: "Error while starting new conversation");
+    }
+  }
+
+  Future<void> removeConversation(String convId) async {
+    try {
+      setState(() async {
+        final lastConvs = conversations;
+        final removedConv = lastConvs.conversations.remove(convId);
+        if (convId == conversationId) {
+          startNewConversation();
+        }
+        if (removedConv != null) {
+          conversations = lastConvs;
+          ConversationManager manager = ConversationManager();
+
+          final keyToUse = await getKey();
+
+          Conversations newConversations =
+              Conversations(conversations: lastConvs.conversations);
+          manager.saveConversations(keyToUse, newConversations, userId);
+          log("Conversation removed");
+          showCustomSnackBar(
+              context: context,
+              message: "Conversation removed",
+              icon: Icons.check_circle,
+              iconColor: Colors.green);
+        }
+      });
+    } catch (e) {
+      log("Error while removing conversation $e");
     }
   }
 
@@ -222,6 +265,26 @@ class _ChatScreenState extends State<ChatScreen> {
       showOutPut(context, result, isExec);
     } catch (e) {
       log("An error occured $e");
+    }
+  }
+
+  Future<String> getKey() async {
+    try {
+      SecureStorageService service = SecureStorageService();
+
+      String keyToUse = "";
+      final savedkey = await service.loadPrivateKey(userId);
+
+      if (savedkey != null) {
+        keyToUse = savedkey;
+      } else {
+        keyToUse = await generateSecureKey(32);
+        await service.savePrivateKey(keyToUse, userId);
+      }
+      return keyToUse;
+    } catch (e) {
+      log("An error occured $e");
+      return "";
     }
   }
 
@@ -304,7 +367,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void startListening() async {
+  Future<void> startListening() async {
     try {
       if (!_speechEnabled) {
         logError("Speech recognition is not enabled");
@@ -577,11 +640,15 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: primaryColor,
-      appBar:
-          TopBar(primaryColor: primaryColor, secondaryColor: secondaryColor),
+      appBar: TopBar(
+          startConv: startNewConversation,
+          primaryColor: primaryColor,
+          secondaryColor: secondaryColor),
       drawer: SideBard(
+        currentConvId: conversationId,
+        startConv: startNewConversation,
         conversations: conversations,
-        onTap: () async {
+        onTap: (String convId) async {
           final result = await showMenu(
               context: context,
               position: RelativeRect.fromLTRB(50, 400, 100, 100),
@@ -617,10 +684,12 @@ class _ChatScreenState extends State<ChatScreen> {
                       ],
                     )),
               ]);
+          if (result == "remove") {
+            await removeConversation(convId);
+            getConversations();
+          }
         },
-        onOpen: () {
-          log("opening conversation");
-        },
+        onOpen: loadConversation,
       ),
       body: Stack(
         alignment: Alignment.center,

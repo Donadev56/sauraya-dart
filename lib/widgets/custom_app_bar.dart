@@ -6,11 +6,13 @@ import '../logger/logger.dart';
 class TopBar extends StatelessWidget implements PreferredSizeWidget {
   final Color primaryColor;
   final Color secondaryColor;
+  final VoidCallback startConv;
 
   const TopBar({
     Key? key,
     required this.primaryColor,
     required this.secondaryColor,
+    required this.startConv,
   }) : super(key: key);
 
   @override
@@ -45,9 +47,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         IconButton(
-          onPressed: () {
-            log("Action clicked");
-          },
+          onPressed: startConv,
           icon: Icon(FeatherIcons.edit),
           color: secondaryColor,
         ),

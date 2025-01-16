@@ -3,16 +3,23 @@ import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/types/types.dart';
 
+typedef LoadConvType = Future Function(String convId);
+typedef rmConvType = Future<void> Function(String);
+
 class SideBard extends StatelessWidget {
-  final VoidCallback onTap;
-  final VoidCallback onOpen;
+  final rmConvType onTap;
+  final LoadConvType onOpen;
   final Conversations conversations;
+  final VoidCallback startConv;
+  final String currentConvId;
 
   const SideBard({
     Key? key,
     required this.onTap,
     required this.onOpen,
     required this.conversations,
+    required this.startConv,
+    required this.currentConvId,
   });
 
   @override
@@ -66,7 +73,10 @@ class SideBard extends StatelessWidget {
                                       color: Colors.transparent, width: 0))),
                         )),
                         IconButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.pop(context);
+                              startConv();
+                            },
                             icon: Icon(
                               FeatherIcons.edit,
                               size: 27,
@@ -85,7 +95,8 @@ class SideBard extends StatelessWidget {
                       color: Color(0XFF212121), // Définir la couleur ici
                       child: InkWell(
                         onTap: () {
-                          log("InkWell");
+                          Navigator.pop(context);
+                          startConv();
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(10),
@@ -129,10 +140,13 @@ class SideBard extends StatelessWidget {
                         .toList()[i]; // Récupère chaque conversation
 
                     return ConversationWidget(
+                        currentConvId: currentConvId,
                         key: ValueKey(conversation.id),
                         conversation: conversation,
-                        onTap: onTap,
-                        onOpen: onOpen);
+                        onTap: () => {onTap(conversation.id)},
+                        onOpen: () {
+                          onOpen(conversation.id);
+                        });
                   }),
             )
         ],
@@ -145,33 +159,41 @@ class ConversationWidget extends StatelessWidget {
   final Conversation conversation;
   final VoidCallback onTap;
   final VoidCallback onOpen;
+  final String currentConvId;
 
   const ConversationWidget({
     Key? key,
     required this.conversation,
     required this.onTap,
     required this.onOpen,
+    required this.currentConvId,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: BoxConstraints(
-        minWidth: MediaQuery.of(context).size.width,
-      ),
-      child: ListTile(
-        key: key,
-        onLongPress: onTap,
-        onTap: onOpen,
-        title: Text(
-          conversation.title,
-          overflow: TextOverflow.clip,
-          maxLines: 1,
-          style: TextStyle(
-              color: const Color.fromARGB(238, 255, 255, 255),
-              fontWeight: FontWeight.bold),
+        constraints: BoxConstraints(
+          minWidth: MediaQuery.of(context).size.width,
         ),
-      ),
-    );
+        child: Container(
+          color: currentConvId == conversation.id
+              ? Colors.white
+              : Colors.transparent,
+          child: ListTile(
+            key: key,
+            onLongPress: onTap,
+            onTap: onOpen,
+            title: Text(
+              conversation.title,
+              overflow: TextOverflow.clip,
+              maxLines: 1,
+              style: TextStyle(
+                  color: currentConvId == conversation.id
+                      ? Colors.black
+                      : const Color.fromARGB(238, 255, 255, 255),
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+        ));
   }
 }
