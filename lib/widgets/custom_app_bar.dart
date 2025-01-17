@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:sauraya/screens/auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../logger/logger.dart';
 
@@ -12,6 +14,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
   final String currentModel;
   final List<String> availableModels;
   final ChangeModelType changeModel;
+  final String userId;
 
   const TopBar({
     super.key,
@@ -21,6 +24,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
     required this.currentModel,
     required this.availableModels,
     required this.changeModel,
+    required this.userId,
   });
 
   @override
@@ -89,6 +93,13 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
         PopupMenuButton(
           icon: Icon(FeatherIcons.moreVertical),
           iconColor: secondaryColor,
+          onSelected: (value) async {
+            final prefs = await SharedPreferences.getInstance();
+            prefs.remove("lastAccount");
+
+            Navigator.pushReplacement(
+                context, MaterialPageRoute(builder: (context) => AuthScreen()));
+          },
           itemBuilder: (BuildContext context) => const [
             PopupMenuItem(
               child: Row(
@@ -97,7 +108,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
                   Text('Logout'),
                 ],
               ),
-              value: 'option 2',
+              value: 'logout',
             ),
           ],
         ),

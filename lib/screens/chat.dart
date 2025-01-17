@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/service/crypto.dart';
@@ -38,9 +39,9 @@ Color secondaryColor = Colors.white;
 Color darkbgColor = Color(0XFF212121);
 String prompt = "";
 Messages messages = [];
-final TextEditingController _textController = TextEditingController();
-final ScrollController _messagesScrollController = ScrollController();
-stt.SpeechToText speech = stt.SpeechToText();
+late TextEditingController _textController;
+late ScrollController _messagesScrollController;
+late stt.SpeechToText speech;
 bool _speechEnabled = false;
 bool isListening = false;
 Duration _duration = Duration.zero;
@@ -65,7 +66,7 @@ String currentModel = availableModels[1];
 
 Conversations conversations = Conversations(conversations: {});
 
-AudioPlayer audioPlayer = AudioPlayer();
+late AudioPlayer audioPlayer;
 
 late client_socket.Socket socket;
 bool isGeneratingResponse = false;
@@ -74,9 +75,15 @@ class _ChatScreenState extends State<ChatScreen> {
   void stopSocketGeneration() async {
     try {
       socket.emit(SocketEvents.stopGeneration);
+
+      log("Socket disconnected");
       log("Generation stopped");
       setState(() {
         isGeneratingResponse = false;
+        final lastMessages = [...messages];
+        lastMessages.removeWhere((msg) => msg.role == "thinkingLoader");
+
+        messages = [...lastMessages];
       });
     } catch (e) {
       log("error during stop socket generation $e");
@@ -206,6 +213,7 @@ class _ChatScreenState extends State<ChatScreen> {
       Conversations newConversations = conversations;
       newConversations.conversations[convId] = conversationToSave;
       manager.saveConversations(keyToUse, newConversations, userId);
+
       setState(() {
         if (conversationId.isEmpty) {
           conversationId = convId;
@@ -215,6 +223,7 @@ class _ChatScreenState extends State<ChatScreen> {
         }
         conversations = newConversations;
       });
+
       log("Conversations saved and updated");
     } catch (e) {
       log("an error occured $e");
@@ -485,7 +494,10 @@ class _ChatScreenState extends State<ChatScreen> {
             iconColor: Colors.pinkAccent);
         return;
       }
-      Message sysMessage = Message(role: "system", content: systemMessage);
+      Message sysMessage = Message(
+          role: "system",
+          content:
+              "$systemMessage + . the current name of the user you are talking with is ${user.name}, his email ${user.address} , So know what you can do is reply to messages , you can call him by his name only use or remind him his email address in emergency case cause it is private .  ");
 
       Messages lastMessages = [...messages];
 
@@ -597,7 +609,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void connectToSocket() {
     try {
       log("Connecting to the server...");
-      final server = "http://46.202.175.219:7000";
+      final server = "https://chat.sauraya.com";
       client_socket.Socket io = client_socket.io(
         server,
         client_socket.OptionBuilder().setAuth(
@@ -724,6 +736,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    socket.dispose();
     _textController.dispose();
     _messagesScrollController.dispose();
     audioPlayer.stop();
@@ -735,7 +748,10 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     getSavedData();
-
+    _textController = TextEditingController();
+    _messagesScrollController = ScrollController();
+    speech = stt.SpeechToText();
+    audioPlayer = AudioPlayer();
     _initSpeech();
     audioPlayer.onDurationChanged.listen((duration) {
       setState(() {
@@ -762,6 +778,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: primaryColor,
       appBar: TopBar(
+          userId: user.userId,
           changeModel: changeModel,
           availableModels: availableModels,
           currentModel: currentModel,
@@ -936,7 +953,10 @@ class _ChatScreenState extends State<ChatScreen> {
                           decoration: BoxDecoration(color: Colors.grey),
                           child: IconButton(
                             onPressed: () {
-                              log("adding ");
+                              showCustomSnackBar(
+                                  context: context,
+                                  message: "Coming soon!",
+                                  iconColor: Colors.yellow);
                             },
                             icon: Icon(Icons.image),
                             color: Colors.white,

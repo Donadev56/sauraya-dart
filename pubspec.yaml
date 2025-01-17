@@ -64,6 +64,7 @@ dependencies:
 
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
   flutter_test:
     sdk: flutter
 
@@ -131,3 +132,8 @@ flutter_native_splash:
   image: assets/logo2.png
   android: true
   ios: true
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo2.png"

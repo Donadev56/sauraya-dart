@@ -22,7 +22,7 @@ String name = "";
 String otp = "";
 bool isLoading = false;
 int step = 1;
-String url = "http://46.202.175.219:7000";
+String url = "https://chat.sauraya.com";
 
 class _AuthScreenState extends State<AuthScreen> {
   @override
@@ -118,6 +118,7 @@ class _AuthScreenState extends State<AuthScreen> {
               message: "Login successful",
               icon: Icons.check_circle,
               iconColor: Colors.greenAccent);
+
           Navigator.pushReplacement(
               context, MaterialPageRoute(builder: (context) => ChatScreen()));
         } else {
@@ -246,6 +247,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                                   if (step == 2) {
                                                     setState(() {
                                                       step = 1;
+                                                      isLoading = false;
                                                     });
                                                   }
                                                 },

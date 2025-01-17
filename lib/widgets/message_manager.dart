@@ -122,7 +122,7 @@ class MessageManager extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(10),
             margin: messages.length == index + 1
-                ? const EdgeInsets.only(top: 5, bottom: 70)
+                ? const EdgeInsets.only(top: 5, bottom: 100)
                 : const EdgeInsets.all(0),
             child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -194,7 +194,7 @@ class MessageManager extends StatelessWidget {
           alignment: Alignment.topRight,
           child: Container(
             margin: messages.length == index + 1
-                ? const EdgeInsets.only(top: 8, bottom: 70)
+                ? const EdgeInsets.only(top: 8, bottom: 100)
                 : const EdgeInsets.all(8),
             child: ConstrainedBox(
                 constraints: BoxConstraints(
@@ -233,7 +233,8 @@ class MessageManager extends StatelessWidget {
             maxWidth: MediaQuery.of(context).size.width,
           ),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.only(
+                top: 20, left: 20, right: 20, bottom: 200),
             child: LoadingAnimationWidget.fourRotatingDots(
                 color: Colors.white, size: 40),
           ),

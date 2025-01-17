@@ -7,7 +7,7 @@
 
   
     <application
-        android:label="sauraya"
+        android:label="Sauraya"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
       
