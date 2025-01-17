@@ -4,6 +4,7 @@ import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/types/types.dart';
@@ -12,8 +13,9 @@ import 'package:sauraya/utils/snackbar_manager.dart';
 import 'package:sauraya/widgets/code_custom_style.dart';
 import 'package:sauraya/widgets/styleSheet_widget.dart';
 import 'package:markdown/markdown.dart' as md;
-
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 typedef ExecutePythonCode = Future<void> Function(String codeToExecute);
+typedef RegenerateType = Future<void> Function(int msgIndex);
 
 class MessageManager extends StatelessWidget {
   final Messages messages;
@@ -25,6 +27,7 @@ class MessageManager extends StatelessWidget {
   final bool isGeneratingResponse;
   final ExecutePythonCode executePythonCode;
   final bool isExec;
+  final RegenerateType regenerate;
 
   const MessageManager({
     Key? key,
@@ -37,12 +40,14 @@ class MessageManager extends StatelessWidget {
     required this.isGeneratingResponse,
     required this.executePythonCode,
     required this.isExec,
+    required this.regenerate,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final bool isAssistant = messages[index].role == 'assistant';
     final bool isUser = messages[index].role == 'user';
+    final bool isThinkingLoader = messages[index].role == 'thinkingLoader';
     final String msg = messages[index].content;
 
     if (isAssistant) {
@@ -107,6 +112,9 @@ class MessageManager extends StatelessWidget {
                   icon: Icons.check_circle,
                   iconColor: Colors.greenAccent);
             });
+          } else if (result == "regenerate") {
+            log("Regeneration selected");
+            await regenerate(index);
           }
         },
         child: AnimatedContainer(
@@ -153,6 +161,26 @@ class MessageManager extends StatelessWidget {
                             context: context,
                             isGeneratingResponse: isGeneratingResponse),
                       },
+                      onTapLink: (text, href, title) async {
+                        try {
+                          log("Launching the url : $href");
+                          if (href != null) {
+                            Uri url = Uri.parse(href);
+
+                            launchUrl(url);
+                          } else {
+                            log("The url is not available");
+                          }
+                        } catch (e) {
+                          logError("An error occurred $e");
+                          showCustomSnackBar(
+                              context: context,
+                              message: e.toString(),
+                              backgroundColor: Color(0xFF212121),
+                              icon: Icons.error,
+                              iconColor: Colors.red);
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -165,8 +193,8 @@ class MessageManager extends StatelessWidget {
           alignment: Alignment.topRight,
           child: Container(
             margin: messages.length == index + 1
-                ? const EdgeInsets.only(top: 5, bottom: 70)
-                : const EdgeInsets.all(5),
+                ? const EdgeInsets.only(top: 8, bottom: 70)
+                : const EdgeInsets.all(8),
             child: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: MediaQuery.of(context).size.width * 0.85,
@@ -196,6 +224,18 @@ class MessageManager extends StatelessWidget {
                   ),
                 )),
           ));
+    } else if (isThinkingLoader) {
+      return Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width ,
+        ), 
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: LoadingAnimationWidget.fourRotatingDots(color: Colors.white, size: 40),
+        ),
+        ),
+      );
     } else {
       return Container();
     }

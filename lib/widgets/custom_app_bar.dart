@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+
 import '../logger/logger.dart';
+
+typedef ChangeModelType = void Function(String model);
 
 class TopBar extends StatelessWidget implements PreferredSizeWidget {
   final Color primaryColor;
   final Color secondaryColor;
   final VoidCallback startConv;
+  final String currentModel;
+  final List<String> availableModels;
+  final ChangeModelType changeModel;
 
   const TopBar({
     Key? key,
     required this.primaryColor,
     required this.secondaryColor,
     required this.startConv,
+    required this.currentModel,
+    required this.availableModels,
+    required this.changeModel,
   }) : super(key: key);
 
   @override
@@ -30,8 +39,35 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
       title: Row(
         children: [
           TextButton(
-            onPressed: () {
-              log("Text button clicked");
+            onPressed: () async {
+              String? selected = await showMenu(
+                context: context,
+                position: RelativeRect.fromLTRB(60, 100, 100, 100),
+                items: availableModels.map((model) {
+                  return PopupMenuItem(
+                    value: model,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (model == currentModel)
+                          Icon(Icons.check_circle, color: Colors.black),
+                        SizedBox(
+                          width: 5,
+                        ),
+                        Text(
+                          model,
+                          style: TextStyle(color: Colors.black),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+
+              if (selected != null) {
+                changeModel(selected);
+              }
             },
             child: Text(
               "Sauraya Ai",
@@ -54,12 +90,12 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           icon: Icon(FeatherIcons.moreVertical),
           iconColor: secondaryColor,
           itemBuilder: (BuildContext context) => const [
+           
             PopupMenuItem(
-              child: Text('Option 1'),
-              value: 'option 1',
-            ),
-            PopupMenuItem(
-              child: Text('Option 2'),
+              child: Row(children: [
+                Icon(Icons.logout),
+              Text('Logout'),
+              ],) ,
               value: 'option 2',
             ),
           ],

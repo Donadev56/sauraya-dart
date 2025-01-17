@@ -4,6 +4,7 @@ import 'package:sauraya/types/types.dart';
 
 typedef LoadConvType = Future Function(String convId);
 typedef rmConvType = Future<void> Function(String);
+typedef updateInputType = void Function(String value);
 
 class SideBard extends StatelessWidget {
   final rmConvType onTap;
@@ -11,6 +12,8 @@ class SideBard extends StatelessWidget {
   final Conversations conversations;
   final VoidCallback startConv;
   final String currentConvId;
+  final String searchInput;
+  final updateInputType updateInput;
 
   const SideBard({
     Key? key,
@@ -19,10 +22,20 @@ class SideBard extends StatelessWidget {
     required this.conversations,
     required this.startConv,
     required this.currentConvId,
+    required this.searchInput,
+    required this.updateInput,
   });
 
   @override
   Widget build(BuildContext context) {
+    final filteredConversations = conversations.conversations.values
+        .toList()
+        .reversed
+        .toList()
+        .where((conv) =>
+            conv.title.toLowerCase().contains(searchInput.toLowerCase()))
+        .toList();
+
     return Drawer(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
       backgroundColor: Color(0XFF121212),
@@ -46,6 +59,9 @@ class SideBard extends StatelessWidget {
                       children: [
                         Expanded(
                             child: TextField(
+                          onChanged: (value) {
+                            updateInput(value);
+                          },
                           style: TextStyle(color: Colors.white),
                           cursorColor: Colors.grey,
                           decoration: InputDecoration(
@@ -123,20 +139,17 @@ class SideBard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  )
+                  ),
                 ],
               )),
           if (conversations.conversations.isNotEmpty)
             ConstrainedBox(
               constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.8),
+                  maxHeight: MediaQuery.of(context).size.height * 0.7),
               child: ListView.builder(
-                  itemCount: conversations.conversations.values.length,
+                  itemCount: filteredConversations.length,
                   itemBuilder: (BuildContext context, int i) {
-                    final conversation = conversations.conversations.values
-                        .toList()
-                        .reversed
-                        .toList()[i]; // Récupère chaque conversation
+                    final conversation = filteredConversations[i];
 
                     return ConversationWidget(
                         currentConvId: currentConvId,
@@ -147,7 +160,31 @@ class SideBard extends StatelessWidget {
                           onOpen(conversation.id);
                         });
                   }),
-            )
+            ),
+          Container(
+            child: ListTile(
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: Container(
+                  color: Colors.white,
+                  width: 35,
+                  height: 35,
+                  child: Center(
+                    child: Text(
+                      "TD",
+                      style: TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                "talliane devoue",
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          )
         ],
       ),
     );

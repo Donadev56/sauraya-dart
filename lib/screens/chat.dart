@@ -51,6 +51,13 @@ bool isExec = false;
 String userId = "DonaDev";
 String conversationId = "";
 String conversationTitle = "";
+String searchInput = "";
+
+List<String> availableModels = [
+  "llama3.2:1b",
+  "llama3.2",
+];
+String currentModel = availableModels[1];
 
 Conversations conversations = Conversations(conversations: {});
 
@@ -71,6 +78,33 @@ class _ChatScreenState extends State<ChatScreen> {
       log("error during stop socket generation $e");
       showCustomSnackBar(
           context: context, message: "error during stop socket generation $e");
+    }
+  }
+
+  void updateInput(String value) {
+    setState(() {
+      searchInput = value;
+    });
+  }
+
+  void changeModel(String model) {
+    setState(() {
+      currentModel = model;
+    });
+  }
+
+  Future<void> regenerate(int msgIndex) async {
+    try {
+      if (messages.isEmpty) {
+        return;
+      }
+
+      log("Regenerating response $msgIndex");
+      Messages lastMessages = [...messages];
+      lastMessages.removeRange(msgIndex, lastMessages.length);
+      await transferMessage(lastMessages);
+    } catch (e) {
+      logError("An error occurred $e");
     }
   }
 
@@ -419,17 +453,28 @@ class _ChatScreenState extends State<ChatScreen> {
         lastMessages.add(sysMessage);
       }
       Message newMessage = Message(role: "user", content: prompt);
+
       lastMessages.add(newMessage);
+
       log("New message added");
 
+      await transferMessage(lastMessages);
+    } catch (e) {
+      logError(e.toString());
+    }
+  }
+
+  Future<void> transferMessage(Messages lastMessages) async {
+    try {
       setState(() {
-        messages = lastMessages;
+        Message thinkingLoader = Message(role: "thinkingLoader", content: "Thinking");
+        messages = [...lastMessages, thinkingLoader];
         prompt = "";
         isGeneratingResponse = true;
 
         _textController.clear();
 
-        if (messages.length > 2) {
+        if (messages.length > 3) {
           _messagesScrollController.animateTo(
             _messagesScrollController.position.maxScrollExtent,
             duration: Duration(milliseconds: 300),
@@ -437,12 +482,13 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }
       });
+
       OllamaChatRequest newChatRequest = OllamaChatRequest(
-          messages: lastMessages, model: "llama3.2:1b", stream: true);
+          messages: lastMessages, model: currentModel, stream: true);
       socket.emit(SocketEvents.chat, newChatRequest);
-      log("Prmpts sent to the server");
+      log("message sent to the server");
     } catch (e) {
-      logError(e.toString());
+      logError("An error occurred while sending the message $e");
     }
   }
 
@@ -528,15 +574,16 @@ class _ChatScreenState extends State<ChatScreen> {
         final done = response["done"] as bool? ?? false;
         final textResponse = message["content"] as String? ?? "";
 
-        log("is First : $isFirst , Text : $textResponse , Done : $done , message : $message");
-
         if (isFirst) {
           log("First Message received ");
 
           setState(() {
             Message newMessage =
                 Message(role: "assistant", content: textResponse);
-            messages = [...messages, newMessage];
+            final lastMessages = [...messages];
+            lastMessages.removeWhere((msg)=> msg.role == "thinkingLoader");
+            
+            messages = [...lastMessages, newMessage];
             currentNumberOfResponse++;
 
             _messagesScrollController.animateTo(
@@ -560,7 +607,6 @@ class _ChatScreenState extends State<ChatScreen> {
         Message lastMessage = lastMessages[lastMessages.length - 1];
         String newText = lastMessage.content + textResponse;
         setState(() {
-          log("New message: $newText , last message : ${lastMessage.content}");
           Message newMessage = Message(content: newText, role: "assistant");
           lastMessages[messages.length - 1] = newMessage;
           currentNumberOfResponse++;
@@ -642,10 +688,15 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: primaryColor,
       appBar: TopBar(
+          changeModel: changeModel,
+          availableModels: availableModels,
+          currentModel: currentModel,
           startConv: startNewConversation,
           primaryColor: primaryColor,
           secondaryColor: secondaryColor),
       drawer: SideBard(
+        updateInput: updateInput,
+        searchInput: searchInput,
         currentConvId: conversationId,
         startConv: startNewConversation,
         conversations: conversations,
@@ -711,10 +762,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 color: Colors.blue,
                                 onTap: () {
                                   setState(() {
-                                    _textController.text =
-                                        "Generate a python code to show me your programming skills, choose the type of code you want.";
                                     prompt =
                                         "Generate a python code to show me your programming skills, choose the type of code you want.";
+                                    _textController.text = prompt;
                                   });
                                 }),
                             CustomButton(
@@ -722,7 +772,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                 text: "Make a summary",
                                 color: Colors.orange,
                                 onTap: () {
-                                  log("Summary element clicked");
+                                  setState(() {
+                                    prompt =
+                                        "Summarize the lifestyle a person should adopt to be successful in life.";
+                                    _textController.text = prompt;
+                                  });
                                 })
                           ],
                         ),
@@ -734,13 +788,23 @@ class _ChatScreenState extends State<ChatScreen> {
                                 icon: FeatherIcons.bookOpen,
                                 text: "Teach me",
                                 color: Colors.green,
-                                onTap: () {}),
+                                onTap: () {
+                                  setState(() {
+                                    prompt =
+                                        "Teach me how to do data analysis as a data analyst and the tools needed to use it";
+                                    _textController.text = prompt;
+                                  });
+                                }),
                             CustomButton(
                               color: Colors.pink,
                               icon: FontAwesomeIcons.brain,
                               text: "Think deeply about",
                               onTap: () {
-                                log("Think element cliked");
+                                setState(() {
+                                  prompt =
+                                      "think of something I probably don't know that you're teaching me today";
+                                  _textController.text = prompt;
+                                });
                               },
                             )
                           ],
@@ -758,6 +822,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         itemCount: messages.length,
                         itemBuilder: (BuildContext context, int i) {
                           return MessageManager(
+                            regenerate: regenerate,
                             isExec: isExec,
                             executePythonCode: executePythonCode,
                             isGeneratingResponse: isGeneratingResponse,
