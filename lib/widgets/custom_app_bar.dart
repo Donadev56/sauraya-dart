@@ -14,14 +14,14 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
   final ChangeModelType changeModel;
 
   const TopBar({
-    Key? key,
+    super.key,
     required this.primaryColor,
     required this.secondaryColor,
     required this.startConv,
     required this.currentModel,
     required this.availableModels,
     required this.changeModel,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -90,12 +90,13 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           icon: Icon(FeatherIcons.moreVertical),
           iconColor: secondaryColor,
           itemBuilder: (BuildContext context) => const [
-           
             PopupMenuItem(
-              child: Row(children: [
-                Icon(Icons.logout),
-              Text('Logout'),
-              ],) ,
+              child: Row(
+                children: [
+                  Icon(Icons.logout),
+                  Text('Logout'),
+                ],
+              ),
               value: 'option 2',
             ),
           ],

@@ -8,7 +8,6 @@ import 'package:markdown_widget/widget/all.dart';
 class MarkdownCustomStyle {
   static MarkdownStyleSheet get customStyle {
     return MarkdownStyleSheet(
-      
       h1: TextStyle(
           color: Colors.white,
           fontSize: 32,

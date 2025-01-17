@@ -18,7 +18,7 @@ class ConversationManager {
 
       if (encryptedConversations != null) {
         final result = await storageService.saveStringData(
-            databaseKey, encryptedConversations, fileName);
+            databaseKey, encryptedConversations, "$userId-$fileName");
         if (result != null) {
           log("Data stored successfully in $result");
         } else {
@@ -37,7 +37,7 @@ class ConversationManager {
     try {
       final storageService = LocalStorageService();
       final savedData =
-          await storageService.getStringData(databaseKey, fileName);
+          await storageService.getStringData(databaseKey, "$userId-$fileName");
 
       log("Saved data: $savedData");
 

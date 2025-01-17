@@ -13,11 +13,13 @@ import 'package:sauraya/utils/remove_markdown.dart';
 import 'package:sauraya/utils/snackbar_manager.dart';
 import 'package:sauraya/widgets/audio_player.dart';
 import 'package:sauraya/widgets/custom_app_bar.dart';
+import 'package:sauraya/widgets/diaolog.dart';
 import 'package:sauraya/widgets/message_manager.dart';
 import 'package:sauraya/widgets/options_button.dart';
 import 'package:sauraya/widgets/overlay_message.dart';
 import 'package:sauraya/widgets/sidebar_custom.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:socket_io_client/socket_io_client.dart' as client_socket;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
@@ -47,8 +49,10 @@ bool _isPlaying = false;
 int currentNumberOfResponse = 0;
 bool isAudioLoading = false;
 bool isExec = false;
+UserData user =
+    UserData(address: "", userId: "", token: "", joiningDate: 0, name: "");
 
-String userId = "DonaDev";
+String userId = user.userId;
 String conversationId = "";
 String conversationTitle = "";
 String searchInput = "";
@@ -63,7 +67,7 @@ Conversations conversations = Conversations(conversations: {});
 
 AudioPlayer audioPlayer = AudioPlayer();
 
-late IO.Socket socket;
+late client_socket.Socket socket;
 bool isGeneratingResponse = false;
 
 class _ChatScreenState extends State<ChatScreen> {
@@ -105,6 +109,31 @@ class _ChatScreenState extends State<ChatScreen> {
       await transferMessage(lastMessages);
     } catch (e) {
       logError("An error occurred $e");
+    }
+  }
+
+  Future<void> changeTitle(String convId, String newTitle) async {
+    try {
+      ConversationManager manager = ConversationManager();
+
+      final conv = conversations.conversations[convId];
+      if (conv != null) {
+        final newConversation =
+            Conversation(id: conv.id, title: newTitle, messages: conv.messages);
+        setState(() async {
+          conversations.conversations[convId] = newConversation;
+          if (convId == conversationId) {
+            conversationTitle = newTitle;
+          }
+          final key = await getKey();
+          Conversations convsToSave =
+              Conversations(conversations: conversations.conversations);
+
+          await manager.saveConversations(key, convsToSave, userId);
+        });
+      }
+    } catch (e) {
+      log("An error occurred $e");
     }
   }
 
@@ -173,6 +202,7 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       Conversation conversationToSave = Conversation(
           messages: messageToUpdate, id: convId, title: currentTitle);
+
       Conversations newConversations = conversations;
       newConversations.conversations[convId] = conversationToSave;
       manager.saveConversations(keyToUse, newConversations, userId);
@@ -198,7 +228,7 @@ class _ChatScreenState extends State<ChatScreen> {
       String keyToUse = await getKey();
 
       final savedConversations =
-          await manager.getSavedConversations(userId, keyToUse);
+          await manager.getSavedConversations(user.userId, keyToUse);
 
       if (savedConversations != null) {
         setState(() {
@@ -281,6 +311,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Conversations(conversations: lastConvs.conversations);
           manager.saveConversations(keyToUse, newConversations, userId);
           log("Conversation removed");
+          if (!mounted) return;
           showCustomSnackBar(
               context: context,
               message: "Conversation removed",
@@ -296,7 +327,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> executePythonCode(String codeToExecute) async {
     try {
       final result = await getOutput(codeToExecute);
-
+      if (!mounted) return;
       showOutPut(context, result, isExec);
     } catch (e) {
       log("An error occured $e");
@@ -308,13 +339,13 @@ class _ChatScreenState extends State<ChatScreen> {
       SecureStorageService service = SecureStorageService();
 
       String keyToUse = "";
-      final savedkey = await service.loadPrivateKey(userId);
+      final savedkey = await service.loadPrivateKey(user.userId);
 
       if (savedkey != null) {
         keyToUse = savedkey;
       } else {
         keyToUse = await generateSecureKey(32);
-        await service.savePrivateKey(keyToUse, userId);
+        await service.savePrivateKey(keyToUse, user.userId);
       }
       return keyToUse;
     } catch (e) {
@@ -352,6 +383,7 @@ class _ChatScreenState extends State<ChatScreen> {
         setState(() {
           isAudioLoading = false;
         });
+        if (!mounted) return;
         showCustomSnackBar(
             context: context,
             message: "Error converting text",
@@ -363,6 +395,7 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         isAudioLoading = false;
       });
+      if (!mounted) return;
       showCustomSnackBar(
           context: context, message: "error during read response");
     }
@@ -380,6 +413,7 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         isAudioLoading = false;
       });
+      if (!mounted) return;
       showCustomSnackBar(
           context: context,
           message: "Error playing audio: $e",
@@ -427,6 +461,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     } catch (e) {
       logError("error during listen $e");
+      if (!mounted) return;
       showCustomSnackBar(context: context, message: "error during listen $e");
     }
   }
@@ -443,6 +478,11 @@ class _ChatScreenState extends State<ChatScreen> {
       if (prompt.isEmpty) return;
       if (!socket.connected) {
         logError("The server is not connected");
+
+        showCustomSnackBar(
+            context: context,
+            message: "Not connected to the server",
+            iconColor: Colors.pinkAccent);
         return;
       }
       Message sysMessage = Message(role: "system", content: systemMessage);
@@ -467,7 +507,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> transferMessage(Messages lastMessages) async {
     try {
       setState(() {
-        Message thinkingLoader = Message(role: "thinkingLoader", content: "Thinking");
+        Message thinkingLoader =
+            Message(role: "thinkingLoader", content: "Thinking");
         messages = [...lastMessages, thinkingLoader];
         prompt = "";
         isGeneratingResponse = true;
@@ -515,6 +556,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       setState(() {});
     } catch (e) {
+      if (!mounted) return;
       showCustomSnackBar(
           context: context,
           message: "An error occured $e",
@@ -523,12 +565,45 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> getSavedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      SecureStorageService secureStorage = SecureStorageService();
+
+      final userId = prefs.getString('lastAccount');
+      if (userId == null) {
+        logError("No user found");
+        return;
+      }
+      final savedStringData =
+          await secureStorage.loadDataFromFSS("userData/$userId");
+      if (savedStringData == null) {
+        logError("No data found");
+        return;
+      }
+      final savedUserDataJson = json.decode(savedStringData);
+      UserData UserDataParesed = UserData.fromJson(savedUserDataJson);
+      setState(() {
+        user = UserDataParesed;
+      });
+      getConversations();
+
+      connectToSocket();
+    } catch (e) {
+      logError(e.toString());
+    }
+  }
+
   void connectToSocket() {
     try {
       log("Connecting to the server...");
       final server = "http://46.202.175.219:7000";
-      IO.Socket io = IO.io(
-          server, IO.OptionBuilder().setTransports(["websocket"]).build());
+      client_socket.Socket io = client_socket.io(
+        server,
+        client_socket.OptionBuilder().setAuth(
+            {'token': user.token}).setTransports(["websocket"]).build(),
+      );
+
       setState(() {
         socket = io;
       });
@@ -581,8 +656,8 @@ class _ChatScreenState extends State<ChatScreen> {
             Message newMessage =
                 Message(role: "assistant", content: textResponse);
             final lastMessages = [...messages];
-            lastMessages.removeWhere((msg)=> msg.role == "thinkingLoader");
-            
+            lastMessages.removeWhere((msg) => msg.role == "thinkingLoader");
+
             messages = [...lastMessages, newMessage];
             currentNumberOfResponse++;
 
@@ -659,10 +734,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    connectToSocket();
+    getSavedData();
 
     _initSpeech();
-    getConversations();
     audioPlayer.onDurationChanged.listen((duration) {
       setState(() {
         _duration = duration;
@@ -695,6 +769,7 @@ class _ChatScreenState extends State<ChatScreen> {
           primaryColor: primaryColor,
           secondaryColor: secondaryColor),
       drawer: SideBard(
+        name: user.name,
         updateInput: updateInput,
         searchInput: searchInput,
         currentConvId: conversationId,
@@ -739,6 +814,8 @@ class _ChatScreenState extends State<ChatScreen> {
           if (result == "remove") {
             await removeConversation(convId);
             getConversations();
+          } else if (result == "edit") {
+            showInputDialog(context, changeTitle, convId);
           }
         },
         onOpen: loadConversation,

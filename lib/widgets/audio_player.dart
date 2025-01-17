@@ -8,12 +8,12 @@ class AudioPlayerWidget extends StatelessWidget {
   final bool isAudioLoading;
 
   const AudioPlayerWidget({
-    Key? key,
+    super.key,
     required this.isPlaying,
     required this.totalDuration,
     required this.currentPosition,
     required this.isAudioLoading,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

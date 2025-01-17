@@ -3,28 +3,29 @@ import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/types/types.dart';
 
 typedef LoadConvType = Future Function(String convId);
-typedef rmConvType = Future<void> Function(String);
-typedef updateInputType = void Function(String value);
+typedef RmConvType = Future<void> Function(String);
+typedef UpdateInputType = void Function(String value);
 
 class SideBard extends StatelessWidget {
-  final rmConvType onTap;
+  final RmConvType onTap;
   final LoadConvType onOpen;
   final Conversations conversations;
   final VoidCallback startConv;
   final String currentConvId;
   final String searchInput;
-  final updateInputType updateInput;
+  final UpdateInputType updateInput;
+  final String name;
 
-  const SideBard({
-    Key? key,
-    required this.onTap,
-    required this.onOpen,
-    required this.conversations,
-    required this.startConv,
-    required this.currentConvId,
-    required this.searchInput,
-    required this.updateInput,
-  });
+  const SideBard(
+      {super.key,
+      required this.onTap,
+      required this.onOpen,
+      required this.conversations,
+      required this.startConv,
+      required this.currentConvId,
+      required this.searchInput,
+      required this.updateInput,
+      required this.name});
 
   @override
   Widget build(BuildContext context) {
@@ -39,109 +40,111 @@ class SideBard extends StatelessWidget {
     return Drawer(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
       backgroundColor: Color(0XFF121212),
-      width: 280,
+      width: 250,
       child: ListView(
         padding: const EdgeInsets.only(top: 10),
         children: [
-          Container(
-              padding: const EdgeInsets.only(top: 30),
-              margin: const EdgeInsets.all(0),
-              decoration: BoxDecoration(
-                border: Border.all(width: 0, color: Colors.transparent),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                            child: TextField(
-                          onChanged: (value) {
-                            updateInput(value);
-                          },
-                          style: TextStyle(color: Colors.white),
-                          cursorColor: Colors.grey,
-                          decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.all(10),
-                              prefixIcon: Icon(
-                                Icons.search,
-                                color: Colors.white60,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(40),
-                                  borderSide: BorderSide(
-                                      color: Colors.transparent, width: 0)),
-                              enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(40),
-                                  borderSide: BorderSide(
-                                      color: Colors.transparent, width: 0)),
-                              filled: true,
-                              fillColor: const Color.fromARGB(151, 77, 77, 77),
-                              hintText: "Search",
-                              hintStyle: TextStyle(color: Colors.white60),
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(40),
-                                  borderSide: BorderSide(
-                                      color: Colors.transparent, width: 0))),
-                        )),
-                        IconButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              startConv();
+          SafeArea(
+            child: Container(
+                margin: const EdgeInsets.all(0),
+                decoration: BoxDecoration(
+                  border: Border.all(width: 0, color: Colors.transparent),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                              child: TextField(
+                            onChanged: (value) {
+                              updateInput(value);
                             },
-                            icon: Icon(
-                              FeatherIcons.edit,
-                              size: 27,
-                              color: Colors.white60,
-                            ))
-                      ],
+                            style: TextStyle(color: Colors.white),
+                            cursorColor: Colors.grey,
+                            decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.all(10),
+                                prefixIcon: Icon(
+                                  Icons.search,
+                                  color: Colors.white60,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(40),
+                                    borderSide: BorderSide(
+                                        color: Colors.transparent, width: 0)),
+                                enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(40),
+                                    borderSide: BorderSide(
+                                        color: Colors.transparent, width: 0)),
+                                filled: true,
+                                fillColor:
+                                    const Color.fromARGB(151, 77, 77, 77),
+                                hintText: "Search",
+                                hintStyle: TextStyle(color: Colors.white60),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(40),
+                                    borderSide: BorderSide(
+                                        color: Colors.transparent, width: 0))),
+                          )),
+                          IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                startConv();
+                              },
+                              icon: Icon(
+                                FeatherIcons.edit,
+                                size: 27,
+                                color: Colors.white60,
+                              ))
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                        minWidth: MediaQuery.of(context).size.width),
-                    child: Ink(
-                      color: Color(0XFF212121), // Définir la couleur ici
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.pop(context);
-                          startConv();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(75),
-                                child: Image.asset(
-                                  'lib/assets/transparent/image.png',
-                                  fit: BoxFit.cover,
-                                  width: 35,
-                                  height: 35,
+                    SizedBox(
+                      height: 10,
+                    ),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                          minWidth: MediaQuery.of(context).size.width),
+                      child: Ink(
+                        color: Color(0XFF212121), // Définir la couleur ici
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.pop(context);
+                            startConv();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(75),
+                                  child: Image.asset(
+                                    'assets/transparent/image.png',
+                                    fit: BoxFit.cover,
+                                    width: 35,
+                                    height: 35,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                "Start a new Chat",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                                SizedBox(width: 5),
+                                Text(
+                                  "Start a new Chat",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              )),
+                  ],
+                )),
+          ),
           if (conversations.conversations.isNotEmpty)
             ConstrainedBox(
               constraints: BoxConstraints(
@@ -161,7 +164,7 @@ class SideBard extends StatelessWidget {
                         });
                   }),
             ),
-          Container(
+          Center(
             child: ListTile(
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(50),
@@ -171,7 +174,7 @@ class SideBard extends StatelessWidget {
                   height: 35,
                   child: Center(
                     child: Text(
-                      "TD",
+                      name.substring(0, 2).toUpperCase(),
                       style: TextStyle(
                           color: Colors.black, fontWeight: FontWeight.bold),
                     ),
@@ -179,7 +182,9 @@ class SideBard extends StatelessWidget {
                 ),
               ),
               title: Text(
-                "talliane devoue",
+                name.toUpperCase(),
+                overflow: TextOverflow.clip,
+                maxLines: 35,
                 style:
                     TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),

@@ -198,3 +198,42 @@ class Conversations {
     );
   }
 }
+
+class UserData {
+  final String name;
+  final String userId;
+  final int joiningDate;
+  final String address;
+  final String token;
+
+  // Constructeur de la classe
+  UserData({
+    required this.name,
+    required this.userId,
+    required this.joiningDate,
+    required this.address,
+    required this.token,
+  });
+
+  // Méthode pour convertir un objet JSON en une instance de UserData
+  factory UserData.fromJson(Map<String, dynamic> json) {
+    return UserData(
+      name: json['name'] as String,
+      userId: json['userId'] as String,
+      joiningDate: json['joiningDate'] as int,
+      address: json['address'] as String,
+      token: json['token'] as String,
+    );
+  }
+
+  // Méthode pour convertir une instance de UserData en un objet JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'userId': userId,
+      'joiningDate': joiningDate,
+      'address': address,
+      'token': token,
+    };
+  }
+}

@@ -14,6 +14,7 @@ import 'package:sauraya/widgets/code_custom_style.dart';
 import 'package:sauraya/widgets/styleSheet_widget.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+
 typedef ExecutePythonCode = Future<void> Function(String codeToExecute);
 typedef RegenerateType = Future<void> Function(int msgIndex);
 
@@ -30,7 +31,7 @@ class MessageManager extends StatelessWidget {
   final RegenerateType regenerate;
 
   const MessageManager({
-    Key? key,
+    super.key,
     required this.messages,
     required this.index,
     required this.primaryColor,
@@ -41,7 +42,7 @@ class MessageManager extends StatelessWidget {
     required this.executePythonCode,
     required this.isExec,
     required this.regenerate,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +141,7 @@ class MessageManager extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(75),
                     child: Image.asset(
-                      'lib/assets/transparent/image.png',
+                      'assets/transparent/image.png',
                       fit: BoxFit.cover,
                       width: 35, // Taille de l'image
                       height: 35,
@@ -227,13 +228,15 @@ class MessageManager extends StatelessWidget {
     } else if (isThinkingLoader) {
       return Align(
         alignment: Alignment.topLeft,
-        child: ConstrainedBox(constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width ,
-        ), 
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          child: LoadingAnimationWidget.fourRotatingDots(color: Colors.white, size: 40),
-        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: LoadingAnimationWidget.fourRotatingDots(
+                color: Colors.white, size: 40),
+          ),
         ),
       );
     } else {
