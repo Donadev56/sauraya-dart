@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-
+import 'package:sauraya/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
@@ -32,9 +32,6 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-Color primaryColor = Color(0xFF0D0D0D);
-Color secondaryColor = Colors.white;
-Color darkbgColor = Color(0XFF212121);
 String prompt = "";
 Messages messages = [];
 late TextEditingController _textController;
@@ -56,12 +53,8 @@ String conversationId = "";
 String conversationTitle = "";
 String searchInput = "";
 bool hasGenerateAtLastOne = true;
-List<String> availableModels = [
-  "llama3.2:1b",
-  "llama3.2",
-  "dolphin3",
-  "sauraya"
-];
+
+
 String currentModel = availableModels[3];
 
 Conversations conversations = Conversations(conversations: {});
@@ -331,11 +324,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       lastMessages.add(newMessage);
 
-      setState(() {
-        messages = lastMessages;
-        prompt = "";
-        _textController.text = prompt;
-      });
+      updateState(updatedMessages: lastMessages, newPrompt: "", controllerText: "");
 
       chat(lastMessages);
     } catch (e) {
@@ -438,10 +427,12 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (done) {
                   setState(() {
                     isGeneratingResponse = false;
-                    scrollToBottom();
                     currentNumberOfResponse = 0;
                   });
+
+                  scrollToBottom();
                   updateMessages();
+
                 }
               } catch (e) {
                 hasGenerateAtLastOne = true;
@@ -459,12 +450,10 @@ class _ChatScreenState extends State<ChatScreen> {
       logError(e.toString());
       showCustomSnackBar(
           context: context, message: "Error while sending message");
-      setState(() {
-        isGeneratingResponse = false;
-        hasGenerateAtLastOne = true;
+      
         scrollToBottom();
-        currentNumberOfResponse = 0;
-      });
+
+      updateState(generatedAtLastOne: true , isGenerating: false , numberOfResponse: 0,);
       stopGenerationWithoutSocket();
     }
   }
@@ -565,9 +554,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void readResponse(String markdown) async {
     try {
-      setState(() {
-        isAudioLoading = true;
-      });
+      updateState(audioLoading: true);
 
       final textWithEmojis = removeMarkdown(markdown);
       final text = removeEmojis(textWithEmojis);
@@ -589,18 +576,14 @@ class _ChatScreenState extends State<ChatScreen> {
         playAudio(audioBytes);
       } else {
         log("Error converting text");
-        setState(() {
-          isAudioLoading = false;
-        });
+        updateState(audioLoading: false);
         if (!mounted) return;
 
         return;
       }
     } catch (e) {
       log(e as String);
-      setState(() {
-        isAudioLoading = false;
-      });
+     updateState(audioLoading: false);
     }
   }
 
@@ -613,9 +596,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     } catch (e) {
       log("Error playing audio $e");
-      setState(() {
-        isAudioLoading = false;
-      });
+     updateState(audioLoading: false);
       if (!mounted) return;
     }
   }
@@ -623,9 +604,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void stopPlaying() async {
     try {
       audioPlayer.stop();
-      setState(() {
-        _isPlaying = false;
-      });
+     updateState(playing: false);
     } catch (e) {
       log("Error stopping audio $e");
       showCustomSnackBar(
@@ -667,9 +646,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void stopListening() async {
     await speech.stop();
-    setState(() {
-      isListening = false;
-    });
+   updateState(listening: false);
   }
 
   void _initSpeech() async {
@@ -687,9 +664,7 @@ class _ChatScreenState extends State<ChatScreen> {
         onStatus: (status) => {
           if (status == 'done' || status == 'notListening')
             {
-              setState(() {
-                isListening = false;
-              })
+             updateState(listening: false)
             }
         },
       );
@@ -721,10 +696,9 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
       final savedUserDataJson = json.decode(savedStringData);
-      UserData UserDataParesed = UserData.fromJson(savedUserDataJson);
-      setState(() {
-        user = UserDataParesed;
-      });
+      UserData userDataParesed = UserData.fromJson(savedUserDataJson);
+
+      updateState(userData: userDataParesed);
       getConversations();
     } catch (e) {
       logError(e.toString());
@@ -769,6 +743,33 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     });
   }
+
+void updateState({
+  bool? isGenerating,
+  List<Message>? updatedMessages,
+  String? newPrompt,
+  UserData? userData,
+  bool? listening,
+  bool? playing ,
+  bool? audioLoading,
+  int? numberOfResponse ,
+  bool ? generatedAtLastOne ,
+  String ? controllerText
+
+}) {
+  setState(() {
+    if (isGenerating != null) isGeneratingResponse = isGenerating;
+    if (updatedMessages != null) messages = updatedMessages;
+    if (newPrompt != null) prompt = newPrompt;
+    if (userData != null) user = userData ;
+    if (listening != null) isListening = listening;
+    if (playing != null) _isPlaying = playing;
+    if (audioLoading != null) isAudioLoading = audioLoading;
+    if (numberOfResponse != null) currentNumberOfResponse = numberOfResponse;
+    if (generatedAtLastOne != null) hasGenerateAtLastOne = generatedAtLastOne;
+    if (controllerText != null) _textController.text = controllerText;
+  });
+}
 
   @override
   Widget build(BuildContext context) {
