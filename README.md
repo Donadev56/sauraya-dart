@@ -1,9 +1,9 @@
 
 # Sauraya AI
 
-![Logo](https://sauraya.com/logo.png=200x200)
+![Logo](https://sauraya.com/logo.png)
 
-![App Preview](https://sauraya.com/assets/app-2KfjpORI.png =300x300)
+![App Preview](https://sauraya.com/assets/app-2KfjpORI.png)
 
 ## Introduction
 Sauraya is a modern user interface designed to interact with open-source AI models such as Meta's LLama. This application is fully open-source and free, created to provide the benefits of Meta's AI products to a broader audience without the need for setting up resource-intensive local environments. With Sauraya, users simply download the app from [Sauraya.com](https://sauraya.com), install it, and start engaging with Meta's advanced AI models. 
@@ -53,6 +53,6 @@ We welcome all suggestions for improving the project.
 Best regards,  
 **The Opennode Team**
 
-![Opennode Logo](https://opennode.tech/logo.png =100x100)
+![Opennode Logo](https://opennode.tech/logo.png)
 
 Website: [opennode.tech](https://opennode.tech)
