@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/logger/logger.dart';
-import 'package:sauraya/service/crypto.dart';
 import 'package:sauraya/service/secure_storage.dart';
 import 'package:sauraya/types/types.dart';
 import 'package:sauraya/utils/id_generator.dart';
@@ -32,6 +31,10 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
+
+class _ChatScreenState extends State<ChatScreen> {
+
+
 String prompt = "";
 Messages messages = [];
 late TextEditingController _textController;
@@ -48,7 +51,7 @@ bool isExec = false;
 UserData user =
     UserData(address: "", userId: "", token: "", joiningDate: 0, name: "");
 
-String userId = user.userId;
+String userId = "";
 String conversationId = "";
 String conversationTitle = "";
 String searchInput = "";
@@ -63,7 +66,7 @@ late AudioPlayer audioPlayer;
 
 bool isGeneratingResponse = false;
 
-class _ChatScreenState extends State<ChatScreen> {
+
   void stopGenerationWithoutSocket() async {
     try {
       if (!hasGenerateAtLastOne) {
@@ -136,7 +139,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (convId == conversationId) {
             conversationTitle = newTitle;
           }
-          final key = await getKey();
+          final key = await getKey(user.userId);
           Conversations convsToSave =
               Conversations(conversations: conversations.conversations);
 
@@ -194,7 +197,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       ConversationManager manager = ConversationManager();
 
-      String keyToUse = await getKey();
+      String keyToUse = await getKey(user.userId);
 
       final messageToUpdate = [...messages];
       String convId;
@@ -238,7 +241,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       ConversationManager manager = ConversationManager();
 
-      String keyToUse = await getKey();
+      String keyToUse = await getKey(user.userId);
 
       final savedConversations =
           await manager.getSavedConversations(user.userId, keyToUse);
@@ -352,7 +355,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
         _textController.clear();
 
-        scrollToBottom();
+        scrollToBottom(_messagesScrollController);
       });
       OllamaChatRequest newChatRequest = OllamaChatRequest(
           messages: lastMessages,
@@ -401,14 +404,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     messages = [...lastMessages, newMessage];
                     currentNumberOfResponse++;
 
-                    scrollToBottom();
+                    scrollToBottom(_messagesScrollController);
                   });
 
                   return;
                 }
 
                 if (currentNumberOfResponse == 2) {
-                  scrollToBottom();
+                  scrollToBottom(_messagesScrollController);
                 }
 
                 Messages lastMessages = [...messages];
@@ -430,7 +433,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     currentNumberOfResponse = 0;
                   });
 
-                  scrollToBottom();
+                  scrollToBottom(_messagesScrollController);
                   updateMessages();
 
                 }
@@ -451,23 +454,14 @@ class _ChatScreenState extends State<ChatScreen> {
       showCustomSnackBar(
           context: context, message: "Error while sending message");
       
-        scrollToBottom();
+        scrollToBottom(_messagesScrollController);
 
       updateState(generatedAtLastOne: true , isGenerating: false , numberOfResponse: 0,);
       stopGenerationWithoutSocket();
     }
   }
 
-  void scrollToBottom() {
-    if (_messagesScrollController.hasClients) {
-      _messagesScrollController.animateTo(
-        _messagesScrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
+  
   Future<void> findTitle(String text) async {
     try {
       log("Finding title for $text");
@@ -503,7 +497,7 @@ class _ChatScreenState extends State<ChatScreen> {
           conversations = lastConvs;
           ConversationManager manager = ConversationManager();
 
-          final keyToUse = await getKey();
+          final keyToUse = await getKey(user.userId);
 
           Conversations newConversations =
               Conversations(conversations: lastConvs.conversations);
@@ -532,25 +526,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<String> getKey() async {
-    try {
-      SecureStorageService service = SecureStorageService();
 
-      String keyToUse = "";
-      final savedkey = await service.loadPrivateKey(user.userId);
-
-      if (savedkey != null) {
-        keyToUse = savedkey;
-      } else {
-        keyToUse = await generateSecureKey(32);
-        await service.savePrivateKey(keyToUse, user.userId);
-      }
-      return keyToUse;
-    } catch (e) {
-      log("An error occured $e");
-      return "";
-    }
-  }
 
   void readResponse(String markdown) async {
     try {
@@ -761,7 +737,7 @@ void updateState({
     if (isGenerating != null) isGeneratingResponse = isGenerating;
     if (updatedMessages != null) messages = updatedMessages;
     if (newPrompt != null) prompt = newPrompt;
-    if (userData != null) user = userData ;
+    if (userData != null) {user = userData; userId = user.userId; }
     if (listening != null) isListening = listening;
     if (playing != null) _isPlaying = playing;
     if (audioLoading != null) isAudioLoading = audioLoading;
@@ -854,8 +830,8 @@ void updateState({
                                 color: Colors.blue,
                                 onTap: () {
                                   setState(() {
-                                    prompt =
-                                        "Generate a python code to show me your programming skills, choose the type of code you want.";
+                                    prompt = startingConversions[0]
+                                       ;
                                     _textController.text = prompt;
                                   });
                                 }),
@@ -865,8 +841,8 @@ void updateState({
                                 color: Colors.orange,
                                 onTap: () {
                                   setState(() {
-                                    prompt =
-                                        "Summarize the lifestyle a person should adopt to be successful in life.";
+                                    prompt = startingConversions[1]
+                                        ;
                                     _textController.text = prompt;
                                   });
                                 })
@@ -882,8 +858,8 @@ void updateState({
                                 color: Colors.green,
                                 onTap: () {
                                   setState(() {
-                                    prompt =
-                                        "Teach me how to do data analysis as a data analyst and the tools needed to use it";
+                                    prompt = startingConversions[2]
+                                       ;
                                     _textController.text = prompt;
                                   });
                                 }),
@@ -893,8 +869,8 @@ void updateState({
                               text: "Think deeply about",
                               onTap: () {
                                 setState(() {
-                                  prompt =
-                                      "think of something I probably don't know that you're teaching me today";
+                                  prompt = startingConversions[3]
+                                     ;
                                   _textController.text = prompt;
                                 });
                               },
