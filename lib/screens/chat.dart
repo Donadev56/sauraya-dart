@@ -31,41 +31,36 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-
 class _ChatScreenState extends State<ChatScreen> {
+  String prompt = "";
+  Messages messages = [];
+  late TextEditingController _textController;
+  late ScrollController _messagesScrollController;
+  late stt.SpeechToText speech;
+  bool _speechEnabled = false;
+  bool isListening = false;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  bool _isPlaying = false;
+  int currentNumberOfResponse = 0;
+  bool isAudioLoading = false;
+  bool isExec = false;
+  UserData user =
+      UserData(address: "", userId: "", token: "", joiningDate: 0, name: "");
 
+  String userId = "";
+  String conversationId = "";
+  String conversationTitle = "";
+  String searchInput = "";
+  bool hasGenerateAtLastOne = true;
 
-String prompt = "";
-Messages messages = [];
-late TextEditingController _textController;
-late ScrollController _messagesScrollController;
-late stt.SpeechToText speech;
-bool _speechEnabled = false;
-bool isListening = false;
-Duration _duration = Duration.zero;
-Duration _position = Duration.zero;
-bool _isPlaying = false;
-int currentNumberOfResponse = 0;
-bool isAudioLoading = false;
-bool isExec = false;
-UserData user =
-    UserData(address: "", userId: "", token: "", joiningDate: 0, name: "");
+  String currentModel = availableModels[3];
 
-String userId = "";
-String conversationId = "";
-String conversationTitle = "";
-String searchInput = "";
-bool hasGenerateAtLastOne = true;
+  Conversations conversations = Conversations(conversations: {});
 
+  late AudioPlayer audioPlayer;
 
-String currentModel = availableModels[3];
-
-Conversations conversations = Conversations(conversations: {});
-
-late AudioPlayer audioPlayer;
-
-bool isGeneratingResponse = false;
-
+  bool isGeneratingResponse = false;
 
   void stopGenerationWithoutSocket() async {
     try {
@@ -134,17 +129,18 @@ bool isGeneratingResponse = false;
       if (conv != null) {
         final newConversation =
             Conversation(id: conv.id, title: newTitle, messages: conv.messages);
-        setState(() async {
+        final key = await getKey(user.userId);
+
+        setState(() {
           conversations.conversations[convId] = newConversation;
           if (convId == conversationId) {
             conversationTitle = newTitle;
           }
-          final key = await getKey(user.userId);
-          Conversations convsToSave =
-              Conversations(conversations: conversations.conversations);
-
-          await manager.saveConversations(key, convsToSave, userId);
         });
+        Conversations convsToSave =
+            Conversations(conversations: conversations.conversations);
+
+        await manager.saveConversations(key, convsToSave, userId);
       }
     } catch (e) {
       log("An error occurred $e");
@@ -295,6 +291,7 @@ bool isGeneratingResponse = false;
         messages = [];
         isGeneratingResponse = false;
         isExec = false;
+        hasGenerateAtLastOne = true;
 
         isListening = false;
         currentNumberOfResponse = 0;
@@ -327,7 +324,8 @@ bool isGeneratingResponse = false;
 
       lastMessages.add(newMessage);
 
-      updateState(updatedMessages: lastMessages, newPrompt: "", controllerText: "");
+      updateState(
+          updatedMessages: lastMessages, newPrompt: "", controllerText: "");
 
       chat(lastMessages);
     } catch (e) {
@@ -428,14 +426,10 @@ bool isGeneratingResponse = false;
                 });
 
                 if (done) {
-                  setState(() {
-                    isGeneratingResponse = false;
-                    currentNumberOfResponse = 0;
-                  });
+                  updateState(isGenerating: false, numberOfResponse: 0);
 
                   scrollToBottom(_messagesScrollController);
                   updateMessages();
-
                 }
               } catch (e) {
                 hasGenerateAtLastOne = true;
@@ -451,17 +445,21 @@ bool isGeneratingResponse = false;
       });
     } catch (e) {
       logError(e.toString());
+      if (!mounted) return;
       showCustomSnackBar(
           context: context, message: "Error while sending message");
-      
-        scrollToBottom(_messagesScrollController);
 
-      updateState(generatedAtLastOne: true , isGenerating: false , numberOfResponse: 0,);
+      scrollToBottom(_messagesScrollController);
+
+      updateState(
+        generatedAtLastOne: true,
+        isGenerating: false,
+        numberOfResponse: 0,
+      );
       stopGenerationWithoutSocket();
     }
   }
 
-  
   Future<void> findTitle(String text) async {
     try {
       log("Finding title for $text");
@@ -486,8 +484,10 @@ bool isGeneratingResponse = false;
   }
 
   Future<void> removeConversation(String convId) async {
+    final keyToUse = await getKey(user.userId);
+
     try {
-      setState(() async {
+      setState(() {
         final lastConvs = conversations;
         final removedConv = lastConvs.conversations.remove(convId);
         if (convId == conversationId) {
@@ -496,8 +496,6 @@ bool isGeneratingResponse = false;
         if (removedConv != null) {
           conversations = lastConvs;
           ConversationManager manager = ConversationManager();
-
-          final keyToUse = await getKey(user.userId);
 
           Conversations newConversations =
               Conversations(conversations: lastConvs.conversations);
@@ -525,8 +523,6 @@ bool isGeneratingResponse = false;
       log("An error occured $e");
     }
   }
-
-
 
   void readResponse(String markdown) async {
     try {
@@ -559,7 +555,7 @@ bool isGeneratingResponse = false;
       }
     } catch (e) {
       log(e as String);
-     updateState(audioLoading: false);
+      updateState(audioLoading: false);
     }
   }
 
@@ -572,7 +568,7 @@ bool isGeneratingResponse = false;
       });
     } catch (e) {
       log("Error playing audio $e");
-     updateState(audioLoading: false);
+      updateState(audioLoading: false);
       if (!mounted) return;
     }
   }
@@ -580,7 +576,7 @@ bool isGeneratingResponse = false;
   void stopPlaying() async {
     try {
       audioPlayer.stop();
-     updateState(playing: false);
+      updateState(playing: false);
     } catch (e) {
       log("Error stopping audio $e");
       showCustomSnackBar(
@@ -622,7 +618,7 @@ bool isGeneratingResponse = false;
 
   void stopListening() async {
     await speech.stop();
-   updateState(listening: false);
+    updateState(listening: false);
   }
 
   void _initSpeech() async {
@@ -639,9 +635,7 @@ bool isGeneratingResponse = false;
         }),
         onStatus: (status) => {
           if (status == 'done' || status == 'notListening')
-            {
-             updateState(listening: false)
-            }
+            {updateState(listening: false)}
         },
       );
       setState(() {});
@@ -720,32 +714,33 @@ bool isGeneratingResponse = false;
     });
   }
 
-void updateState({
-  bool? isGenerating,
-  List<Message>? updatedMessages,
-  String? newPrompt,
-  UserData? userData,
-  bool? listening,
-  bool? playing ,
-  bool? audioLoading,
-  int? numberOfResponse ,
-  bool ? generatedAtLastOne ,
-  String ? controllerText
-
-}) {
-  setState(() {
-    if (isGenerating != null) isGeneratingResponse = isGenerating;
-    if (updatedMessages != null) messages = updatedMessages;
-    if (newPrompt != null) prompt = newPrompt;
-    if (userData != null) {user = userData; userId = user.userId; }
-    if (listening != null) isListening = listening;
-    if (playing != null) _isPlaying = playing;
-    if (audioLoading != null) isAudioLoading = audioLoading;
-    if (numberOfResponse != null) currentNumberOfResponse = numberOfResponse;
-    if (generatedAtLastOne != null) hasGenerateAtLastOne = generatedAtLastOne;
-    if (controllerText != null) _textController.text = controllerText;
-  });
-}
+  void updateState(
+      {bool? isGenerating,
+      List<Message>? updatedMessages,
+      String? newPrompt,
+      UserData? userData,
+      bool? listening,
+      bool? playing,
+      bool? audioLoading,
+      int? numberOfResponse,
+      bool? generatedAtLastOne,
+      String? controllerText}) {
+    setState(() {
+      if (isGenerating != null) isGeneratingResponse = isGenerating;
+      if (updatedMessages != null) messages = updatedMessages;
+      if (newPrompt != null) prompt = newPrompt;
+      if (userData != null) {
+        user = userData;
+        userId = user.userId;
+      }
+      if (listening != null) isListening = listening;
+      if (playing != null) _isPlaying = playing;
+      if (audioLoading != null) isAudioLoading = audioLoading;
+      if (numberOfResponse != null) currentNumberOfResponse = numberOfResponse;
+      if (generatedAtLastOne != null) hasGenerateAtLastOne = generatedAtLastOne;
+      if (controllerText != null) _textController.text = controllerText;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -806,6 +801,7 @@ void updateState({
             await removeConversation(convId);
             getConversations();
           } else if (result == "edit") {
+            if (!mounted) return;
             showInputDialog(context, changeTitle, convId);
           }
         },
@@ -830,8 +826,7 @@ void updateState({
                                 color: Colors.blue,
                                 onTap: () {
                                   setState(() {
-                                    prompt = startingConversions[0]
-                                       ;
+                                    prompt = startingConversions[0];
                                     _textController.text = prompt;
                                   });
                                 }),
@@ -841,8 +836,7 @@ void updateState({
                                 color: Colors.orange,
                                 onTap: () {
                                   setState(() {
-                                    prompt = startingConversions[1]
-                                        ;
+                                    prompt = startingConversions[1];
                                     _textController.text = prompt;
                                   });
                                 })
@@ -858,8 +852,7 @@ void updateState({
                                 color: Colors.green,
                                 onTap: () {
                                   setState(() {
-                                    prompt = startingConversions[2]
-                                       ;
+                                    prompt = startingConversions[2];
                                     _textController.text = prompt;
                                   });
                                 }),
@@ -869,8 +862,7 @@ void updateState({
                               text: "Think deeply about",
                               onTap: () {
                                 setState(() {
-                                  prompt = startingConversions[3]
-                                     ;
+                                  prompt = startingConversions[3];
                                   _textController.text = prompt;
                                 });
                               },
@@ -1030,7 +1022,14 @@ void updateState({
                                 log("Sending message $prompt");
                                 sendInitialMessage();
                               } else {
-                                if (!hasGenerateAtLastOne) return;
+                                if (!hasGenerateAtLastOne) {
+                                  showCustomSnackBar(
+                                      context: context,
+                                      message:
+                                          "Please wait for the first response",
+                                      iconColor: Colors.yellow);
+                                  return;
+                                }
                                 stopGenerationWithoutSocket();
                               }
                             },
