@@ -53,8 +53,9 @@ class _ChatScreenState extends State<ChatScreen> {
   String conversationTitle = "";
   String searchInput = "";
   bool hasGenerateAtLastOne = true;
+  bool isBottom = false ;
 
-  String currentModel = availableModels[3];
+  String currentModel = availableModels[0];
 
   Conversations conversations = Conversations(conversations: {});
 
@@ -232,6 +233,22 @@ class _ChatScreenState extends State<ChatScreen> {
       log("an error occured $e");
     }
   }
+
+  void _onScroll() {
+  final currentPosition = _messagesScrollController.position.pixels;
+  final maxPosition = _messagesScrollController.position.maxScrollExtent;
+
+  if (currentPosition >= maxPosition) {
+    setState(() {
+      isBottom = true ;
+    });
+  } else {
+    setState(() {
+      isBottom = false ;
+    });
+  }
+}
+
 
   Future<void> getConversations() async {
     try {
@@ -691,6 +708,7 @@ class _ChatScreenState extends State<ChatScreen> {
     getSavedData();
     _textController = TextEditingController();
     _messagesScrollController = ScrollController();
+    _messagesScrollController.addListener(_onScroll);
     speech = stt.SpeechToText();
     audioPlayer = AudioPlayer();
     _initSpeech();
@@ -1070,7 +1088,33 @@ class _ChatScreenState extends State<ChatScreen> {
                     totalDuration: _duration,
                     currentPosition: _position,
                   ),
-                ))
+                )),
+
+      if (!isBottom && _messagesScrollController.hasClients)    Positioned(
+            top:MediaQuery.of(context).size.height * 0.70 ,
+            left: MediaQuery.of(context).size.width * 0.45,
+          child:
+          InkWell(
+            onTap: (){
+              scrollToBottom(_messagesScrollController);
+              setState(() {
+                isBottom = true ;
+              });
+            },
+          child: ClipPath(
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                 borderRadius: BorderRadius.circular(50),
+                color: Color(0XFF212121)
+              ),
+              child: Center(
+                child: Icon(FeatherIcons.chevronDown, color: Colors.white,),
+              ),
+            ),
+          ),
+          ))
         ],
       ),
     );

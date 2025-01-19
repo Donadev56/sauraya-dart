@@ -3,7 +3,6 @@ import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/screens/auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../logger/logger.dart';
 
 typedef ChangeModelType = void Function(String model);
 
@@ -73,14 +72,19 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
                 changeModel(selected);
               }
             },
-            child: Text(
-              "Sauraya Ai",
+            child: Row(
+              children: [
+                Text(
+              "Sauraya Ai", 
               style: TextStyle(
                 color: secondaryColor,
                 fontSize: 19,
                 fontWeight: FontWeight.bold,
               ),
             ),
+           
+              ],
+            ) 
           ),
         ],
       ),
