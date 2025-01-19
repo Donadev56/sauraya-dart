@@ -29,6 +29,7 @@ class MessageManager extends StatelessWidget {
   final ExecutePythonCode executePythonCode;
   final bool isExec;
   final RegenerateType regenerate;
+  final String titleFound;
 
   const MessageManager({
     super.key,
@@ -42,6 +43,7 @@ class MessageManager extends StatelessWidget {
     required this.executePythonCode,
     required this.isExec,
     required this.regenerate,
+    required this.titleFound,
   });
 
   @override
@@ -233,11 +235,27 @@ class MessageManager extends StatelessWidget {
             maxWidth: MediaQuery.of(context).size.width,
           ),
           child: Container(
-            padding: const EdgeInsets.only(
-                top: 20, left: 20, right: 20, bottom: 200),
-            child: LoadingAnimationWidget.fourRotatingDots(
-                color: Colors.white, size: 40),
-          ),
+              padding: const EdgeInsets.only(
+                  top: 20, left: 20, right: 20, bottom: 200),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LoadingAnimationWidget.fourRotatingDots(
+                      color: Colors.white, size: 40),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  if (messages.length < 4)
+                    Text(
+                      titleFound,
+                      overflow: TextOverflow.fade,
+                      maxLines: 2,
+                      style: TextStyle(
+                          color: const Color.fromARGB(141, 255, 255, 255)),
+                    )
+                ],
+              )),
         ),
       );
     } else {

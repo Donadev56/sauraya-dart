@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,7 +7,6 @@ import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/service/crypto.dart';
 import 'package:sauraya/service/secure_storage.dart';
-import 'package:sauraya/types/enums.dart';
 import 'package:sauraya/types/types.dart';
 import 'package:sauraya/utils/id_generator.dart';
 import 'package:sauraya/utils/remove_markdown.dart';
@@ -20,7 +19,6 @@ import 'package:sauraya/widgets/options_button.dart';
 import 'package:sauraya/widgets/overlay_message.dart';
 import 'package:sauraya/widgets/sidebar_custom.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:socket_io_client/socket_io_client.dart' as client_socket;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
@@ -57,26 +55,29 @@ String userId = user.userId;
 String conversationId = "";
 String conversationTitle = "";
 String searchInput = "";
-
+bool hasGenerateAtLastOne = true;
 List<String> availableModels = [
   "llama3.2:1b",
   "llama3.2",
+  "dolphin3",
+  "sauraya"
 ];
-String currentModel = availableModels[1];
+String currentModel = availableModels[3];
 
 Conversations conversations = Conversations(conversations: {});
 
 late AudioPlayer audioPlayer;
 
-late client_socket.Socket socket;
 bool isGeneratingResponse = false;
 
 class _ChatScreenState extends State<ChatScreen> {
-  void stopSocketGeneration() async {
+  void stopGenerationWithoutSocket() async {
     try {
-      socket.emit(SocketEvents.stopGeneration);
-
-      log("Socket disconnected");
+      if (!hasGenerateAtLastOne) {
+        logError(
+            "Can't send a new message when the last message is not generated");
+        return;
+      }
       log("Generation stopped");
       setState(() {
         isGeneratingResponse = false;
@@ -84,6 +85,8 @@ class _ChatScreenState extends State<ChatScreen> {
         lastMessages.removeWhere((msg) => msg.role == "thinkingLoader");
 
         messages = [...lastMessages];
+
+        updateMessages();
       });
     } catch (e) {
       log("error during stop socket generation $e");
@@ -104,8 +107,14 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  Future<void> regenerate(int msgIndex) async {
+  Future<void> regenerateWithoutSocket(int msgIndex) async {
     try {
+      if (!hasGenerateAtLastOne) {
+        logError(
+            "Can't send a new message when the last message is not generated");
+        return;
+      }
+
       if (messages.isEmpty) {
         return;
       }
@@ -113,7 +122,9 @@ class _ChatScreenState extends State<ChatScreen> {
       log("Regenerating response $msgIndex");
       Messages lastMessages = [...messages];
       lastMessages.removeRange(msgIndex, lastMessages.length);
-      await transferMessage(lastMessages);
+      stopGenerationWithoutSocket();
+
+      await chat(lastMessages);
     } catch (e) {
       logError("An error occurred $e");
     }
@@ -194,7 +205,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       final messageToUpdate = [...messages];
       String convId;
-      String firstMessageText = messageToUpdate[0].content;
+      String firstMessageText = messageToUpdate[1].content;
       String currentTitle =
           conversationTitle.isEmpty ? firstMessageText : conversationTitle;
 
@@ -281,6 +292,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void startNewConversation() {
     try {
+      stopGenerationWithoutSocket();
       setState(() {
         conversationId = "";
         conversationTitle = "";
@@ -299,6 +311,194 @@ class _ChatScreenState extends State<ChatScreen> {
       log("Error while starting new conversation $e");
       showCustomSnackBar(
           context: context, message: "Error while starting new conversation");
+    }
+  }
+
+  Future<void> sendInitialMessage() async {
+    try {
+      Message sysMessage = Message(
+          role: "system",
+          content:
+              "$systemMessage + . the current name of the user you are talking with is ${user.name}, So know what you can do is reply to messages , You can call him by his name .  ");
+
+      Messages lastMessages = [...messages];
+      Message newMessage = Message(role: "user", content: prompt);
+
+      if (lastMessages.isEmpty) {
+        lastMessages.add(sysMessage);
+        findTitle(newMessage.content);
+      }
+
+      lastMessages.add(newMessage);
+
+      setState(() {
+        messages = lastMessages;
+        prompt = "";
+        _textController.text = prompt;
+      });
+
+      chat(lastMessages);
+    } catch (e) {
+      logError(e.toString());
+    }
+  }
+
+  Future<void> chat(Messages lastMessages) async {
+    try {
+      if (!hasGenerateAtLastOne) {
+        logError(
+            "Can't send a new message when the last message is not generated");
+        return;
+      }
+      hasGenerateAtLastOne = false;
+
+      final client = HttpClient();
+
+      setState(() {
+        Message thinkingLoader =
+            Message(role: "thinkingLoader", content: "Thinking");
+        messages = [...lastMessages, thinkingLoader];
+        prompt = "";
+        isGeneratingResponse = true;
+
+        _textController.clear();
+
+        scrollToBottom();
+      });
+      OllamaChatRequest newChatRequest = OllamaChatRequest(
+          messages: lastMessages,
+          model: currentModel,
+          stream: true,
+          token: user.token);
+
+      final request = await client
+          .postUrl(Uri.parse("https://chat.sauraya.com/chat/message"));
+
+      request.headers.contentType = ContentType.json;
+
+      request.write(json.encode(newChatRequest.toJson()));
+
+      final response = await request.close();
+
+      response.transform(utf8.decoder).listen((chunk) {
+        for (final line in chunk.split("\n")) {
+          if (!isGeneratingResponse) {
+            break;
+          }
+
+          if (line.startsWith("data: ")) {
+            final jsonStr = line.replaceFirst("data: ", "").trim();
+
+            if (jsonStr.isNotEmpty) {
+              try {
+                final dynamic data = jsonDecode(jsonStr);
+                final isFirst = data["isFirst"];
+                final response = data["response"];
+                final message = response["message"];
+                final done = response["done"];
+                final textResponse = message["content"];
+
+                if (isFirst == true) {
+                  log("First Message received ");
+                  hasGenerateAtLastOne = true;
+
+                  setState(() {
+                    Message newMessage =
+                        Message(role: "assistant", content: textResponse);
+                    final lastMessages = [...messages];
+                    lastMessages
+                        .removeWhere((msg) => msg.role == "thinkingLoader");
+
+                    messages = [...lastMessages, newMessage];
+                    currentNumberOfResponse++;
+
+                    scrollToBottom();
+                  });
+
+                  return;
+                }
+
+                if (currentNumberOfResponse == 2) {
+                  scrollToBottom();
+                }
+
+                Messages lastMessages = [...messages];
+                Message lastMessage = lastMessages[lastMessages.length - 1];
+                String newText = lastMessage.content + textResponse;
+                setState(() {
+                  Message newMessage =
+                      Message(content: newText, role: "assistant");
+                  lastMessages[messages.length - 1] = newMessage;
+                  currentNumberOfResponse++;
+                  setState(() {
+                    messages = lastMessages;
+                  });
+                });
+
+                if (done) {
+                  setState(() {
+                    isGeneratingResponse = false;
+                    scrollToBottom();
+                    currentNumberOfResponse = 0;
+                  });
+                  updateMessages();
+                }
+              } catch (e) {
+                hasGenerateAtLastOne = true;
+
+                logError("Error parsing json : $e");
+              }
+            }
+          } else if (line.startsWith("event: done")) {
+            log("Received done event.");
+            hasGenerateAtLastOne = true;
+          }
+        }
+      });
+    } catch (e) {
+      logError(e.toString());
+      showCustomSnackBar(
+          context: context, message: "Error while sending message");
+      setState(() {
+        isGeneratingResponse = false;
+        hasGenerateAtLastOne = true;
+        scrollToBottom();
+        currentNumberOfResponse = 0;
+      });
+      stopGenerationWithoutSocket();
+    }
+  }
+
+  void scrollToBottom() {
+    if (_messagesScrollController.hasClients) {
+      _messagesScrollController.animateTo(
+        _messagesScrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  Future<void> findTitle(String text) async {
+    try {
+      log("Finding title for $text");
+      final newReq = {"token": user.token, "text": text};
+      final response = await http.post(
+          Uri.parse("https://chat.sauraya.com/chat/title"),
+          body: json.encode(newReq),
+          headers: {
+            'Content-Type': 'application/json',
+          });
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        log("Title found $data");
+        setState(() {
+          conversationTitle = data;
+        });
+      }
+    } catch (e) {
+      logError(e.toString());
     }
   }
 
@@ -393,10 +593,7 @@ class _ChatScreenState extends State<ChatScreen> {
           isAudioLoading = false;
         });
         if (!mounted) return;
-        showCustomSnackBar(
-            context: context,
-            message: "Error converting text",
-            iconColor: Colors.pinkAccent);
+
         return;
       }
     } catch (e) {
@@ -404,9 +601,6 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         isAudioLoading = false;
       });
-      if (!mounted) return;
-      showCustomSnackBar(
-          context: context, message: "error during read response");
     }
   }
 
@@ -423,10 +617,6 @@ class _ChatScreenState extends State<ChatScreen> {
         isAudioLoading = false;
       });
       if (!mounted) return;
-      showCustomSnackBar(
-          context: context,
-          message: "Error playing audio: $e",
-          iconColor: Colors.pinkAccent);
     }
   }
 
@@ -480,69 +670,6 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       isListening = false;
     });
-  }
-
-  void sendMessage() async {
-    try {
-      if (prompt.isEmpty) return;
-      if (!socket.connected) {
-        logError("The server is not connected");
-
-        showCustomSnackBar(
-            context: context,
-            message: "Not connected to the server",
-            iconColor: Colors.pinkAccent);
-        return;
-      }
-      Message sysMessage = Message(
-          role: "system",
-          content:
-              "$systemMessage + . the current name of the user you are talking with is ${user.name}, his email ${user.address} , So know what you can do is reply to messages , you can call him by his name only use or remind him his email address in emergency case cause it is private .  ");
-
-      Messages lastMessages = [...messages];
-
-      if (lastMessages.isEmpty) {
-        lastMessages.add(sysMessage);
-      }
-      Message newMessage = Message(role: "user", content: prompt);
-
-      lastMessages.add(newMessage);
-
-      log("New message added");
-
-      await transferMessage(lastMessages);
-    } catch (e) {
-      logError(e.toString());
-    }
-  }
-
-  Future<void> transferMessage(Messages lastMessages) async {
-    try {
-      setState(() {
-        Message thinkingLoader =
-            Message(role: "thinkingLoader", content: "Thinking");
-        messages = [...lastMessages, thinkingLoader];
-        prompt = "";
-        isGeneratingResponse = true;
-
-        _textController.clear();
-
-        if (messages.length > 3) {
-          _messagesScrollController.animateTo(
-            _messagesScrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-
-      OllamaChatRequest newChatRequest = OllamaChatRequest(
-          messages: lastMessages, model: currentModel, stream: true);
-      socket.emit(SocketEvents.chat, newChatRequest);
-      log("message sent to the server");
-    } catch (e) {
-      logError("An error occurred while sending the message $e");
-    }
   }
 
   void _initSpeech() async {
@@ -599,148 +726,18 @@ class _ChatScreenState extends State<ChatScreen> {
         user = UserDataParesed;
       });
       getConversations();
-
-      connectToSocket();
     } catch (e) {
       logError(e.toString());
-    }
-  }
-
-  void connectToSocket() {
-    try {
-      log("Connecting to the server...");
-      final server = "https://chat.sauraya.com";
-      client_socket.Socket io = client_socket.io(
-        server,
-        client_socket.OptionBuilder().setAuth(
-            {'token': user.token}).setTransports(["websocket"]).build(),
-      );
-
-      setState(() {
-        socket = io;
-      });
-
-      io.onConnect((_) {
-        log("Connected to the server $server");
-      });
-      io.on(SocketEvents.titleFound, (newTitle) {
-        log("New title: $newTitle");
-        String foundTitle = newTitle["title"];
-        if (foundTitle.isNotEmpty) {
-          setState(() {
-            conversationTitle = foundTitle;
-          });
-        }
-      });
-      io.on(SocketEvents.partialResponse, (data) {
-        io.on(SocketEvents.error, (error) {
-          logError("Error received $error");
-          showCustomSnackBar(
-              context: context,
-              message: "An error occured in server Side $error",
-              backgroundColor: Colors.pinkAccent,
-              icon: Icons.error,
-              iconColor: Colors.pinkAccent);
-        });
-
-        final isFirst = data["isFirst"] as bool? ?? false;
-        final response = data["response"] as Map<String, dynamic>?;
-
-        if (response == null) {
-          logError("No response in the data received");
-          return;
-        }
-
-        final message = response["message"] as Map<String, dynamic>?;
-
-        if (message == null) {
-          logError("No message in the response data");
-          return;
-        }
-
-        final done = response["done"] as bool? ?? false;
-        final textResponse = message["content"] as String? ?? "";
-
-        if (isFirst) {
-          log("First Message received ");
-
-          setState(() {
-            Message newMessage =
-                Message(role: "assistant", content: textResponse);
-            final lastMessages = [...messages];
-            lastMessages.removeWhere((msg) => msg.role == "thinkingLoader");
-
-            messages = [...lastMessages, newMessage];
-            currentNumberOfResponse++;
-
-            _messagesScrollController.animateTo(
-              _messagesScrollController.position.maxScrollExtent,
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          });
-
-          return;
-        }
-        if (currentNumberOfResponse == 2) {
-          _messagesScrollController.animateTo(
-            _messagesScrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-
-        Messages lastMessages = [...messages];
-        Message lastMessage = lastMessages[lastMessages.length - 1];
-        String newText = lastMessage.content + textResponse;
-        setState(() {
-          Message newMessage = Message(content: newText, role: "assistant");
-          lastMessages[messages.length - 1] = newMessage;
-          currentNumberOfResponse++;
-          setState(() {
-            messages = lastMessages;
-          });
-        });
-
-        if (done) {
-          setState(() {
-            isGeneratingResponse = false;
-            _messagesScrollController.animateTo(
-              _messagesScrollController.position.maxScrollExtent,
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-            currentNumberOfResponse = 0;
-          });
-          readResponse(newText);
-          updateMessages();
-        }
-      });
-      io.onDisconnect((_) {
-        logError("Disconnect from the server $server");
-      });
-    } catch (e) {
-      setState(() {
-        isGeneratingResponse = false;
-        currentNumberOfResponse = 0;
-      });
-      logError(e.toString());
-      showCustomSnackBar(
-          context: context,
-          message: "An error occured in server Side $e",
-          backgroundColor: Colors.pinkAccent,
-          icon: Icons.error,
-          iconColor: Colors.pinkAccent);
     }
   }
 
   @override
   void dispose() {
-    socket.dispose();
     _textController.dispose();
     _messagesScrollController.dispose();
     audioPlayer.stop();
     audioPlayer.dispose();
+
     super.dispose();
   }
 
@@ -916,7 +913,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         itemCount: messages.length,
                         itemBuilder: (BuildContext context, int i) {
                           return MessageManager(
-                            regenerate: regenerate,
+                            titleFound: conversationTitle,
+                            regenerate: regenerateWithoutSocket,
+                            key: ValueKey(messages[i]),
                             isExec: isExec,
                             executePythonCode: executePythonCode,
                             isGeneratingResponse: isGeneratingResponse,
@@ -1052,9 +1051,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                 if (prompt.isEmpty) return;
                                 FocusScope.of(context).unfocus();
                                 log("Sending message $prompt");
-                                sendMessage();
+                                sendInitialMessage();
                               } else {
-                                stopSocketGeneration();
+                                if (!hasGenerateAtLastOne) return;
+                                stopGenerationWithoutSocket();
                               }
                             },
                             icon: !isGeneratingResponse

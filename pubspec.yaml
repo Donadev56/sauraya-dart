@@ -61,6 +61,8 @@ dependencies:
   loading_animation_widget: ^1.3.0
   nanoid: ^1.0.0
   google_fonts: ^6.2.1
+  dio: ^5.2.0
+  stream_transform: ^2.0.0
 
 
 dev_dependencies:

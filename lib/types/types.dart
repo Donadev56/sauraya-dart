@@ -32,11 +32,13 @@ class OllamaChatRequest {
   final String model;
   final Messages messages;
   final bool? stream;
+  final String? token;
 
   OllamaChatRequest({
     required this.model,
     required this.messages,
     this.stream,
+    this.token,
   });
 
   factory OllamaChatRequest.fromJson(Map<String, dynamic> json) {
@@ -45,6 +47,7 @@ class OllamaChatRequest {
       messages:
           (json['messages'] as List).map((e) => Message.fromJson(e)).toList(),
       stream: json['stream'],
+      token: json['token'],
     );
   }
 
@@ -53,6 +56,7 @@ class OllamaChatRequest {
       'model': model,
       'messages': messages.map((e) => e.toJson()).toList(),
       'stream': stream,
+      'token': token,
     };
   }
 }
