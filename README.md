@@ -1,7 +1,7 @@
 
 # Sauraya AI
 
-![Logo](https://sauraya.com/logo.png =200x200)
+![Logo](https://sauraya.com/logo.png=200x200)
 
 ![App Preview](https://sauraya.com/assets/app-2KfjpORI.png =300x300)
 
