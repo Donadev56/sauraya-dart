@@ -417,11 +417,11 @@ class _ChatScreenState extends State<ChatScreen> {
       if (currentModel != availableModels[2]) {
         log("Using default models");
         request = await client
-            .postUrl(Uri.parse("http://46.202.175.219:7001/chat/message"));
+            .postUrl(Uri.parse("https://chat.sauraya.com/chat/message"));
       } else {
         log("Using deepSeek model");
         request = await client.postUrl(
-            Uri.parse("http://46.202.175.219:7001/chat/message/dSeek"));
+            Uri.parse("https://chat.sauraya.com/chat/message/dSeek"));
       }
 
       request.headers.contentType = ContentType.json;
@@ -566,7 +566,7 @@ class _ChatScreenState extends State<ChatScreen> {
           token: user.token);
 
       final response = await http.post(
-          Uri.parse("http://46.202.175.219:7001/chat/message/search"),
+          Uri.parse("https://chat.sauraya.com/chat/message/search"),
           headers: {"Content-Type": "application/json"},
           body: json.encode(newChatRequest.toJson()));
       final text = json.decode(response.body)["result"];
