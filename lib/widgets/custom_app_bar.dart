@@ -3,7 +3,6 @@ import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:sauraya/screens/auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 typedef ChangeModelType = void Function(String model);
 
 class TopBar extends StatelessWidget implements PreferredSizeWidget {
@@ -42,50 +41,48 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
       title: Row(
         children: [
           TextButton(
-            onPressed: () async {
-              String? selected = await showMenu(
-                context: context,
-                position: RelativeRect.fromLTRB(60, 100, 100, 100),
-                items: availableModels.map((model) {
-                  return PopupMenuItem(
-                    value: model,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (model == currentModel)
-                          Icon(Icons.check_circle, color: Colors.black),
-                        SizedBox(
-                          width: 5,
-                        ),
-                        Text(
-                          model,
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              );
+              onPressed: () async {
+                String? selected = await showMenu(
+                  context: context,
+                  position: RelativeRect.fromLTRB(60, 100, 100, 100),
+                  items: availableModels.map((model) {
+                    return PopupMenuItem(
+                      value: model,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          if (model == currentModel)
+                            Icon(Icons.check_circle, color: Colors.black),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Text(
+                            model,
+                            style: TextStyle(color: Colors.black),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                );
 
-              if (selected != null) {
-                changeModel(selected);
-              }
-            },
-            child: Row(
-              children: [
-                Text(
-              "Sauraya Ai", 
-              style: TextStyle(
-                color: secondaryColor,
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-           
-              ],
-            ) 
-          ),
+                if (selected != null) {
+                  changeModel(selected);
+                }
+              },
+              child: Row(
+                children: [
+                  Text(
+                    "Sauraya Ai",
+                    style: TextStyle(
+                      color: secondaryColor,
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              )),
         ],
       ),
       actions: [

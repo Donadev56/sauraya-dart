@@ -8,80 +8,74 @@ import 'package:markdown_widget/widget/all.dart';
 class MarkdownCustomStyle {
   static MarkdownStyleSheet get customStyle {
     return MarkdownStyleSheet(
-      h1: TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          fontStyle: FontStyle.italic),
-      h2: TextStyle(
-          color: const Color.fromARGB(227, 255, 255, 255),
-          fontSize: 30,
-          fontWeight: FontWeight.w700,
-          fontStyle: FontStyle.italic),
-      h3: TextStyle(
-        color: const Color.fromARGB(227, 255, 255, 255),
-        fontSize: 24,
-        fontWeight: FontWeight.w600,
+      // Headings
+      h1: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        fontStyle: FontStyle.italic,
       ),
-      h4: TextStyle(
-          color: const Color.fromARGB(227, 255, 255, 255),
-          fontSize: 20,
-          fontWeight: FontWeight.w500,
-          fontStyle: FontStyle.italic),
-      h5: TextStyle(
-        color: Colors.white,
+      h2: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        fontStyle: FontStyle.italic,
+      ),
+      h3: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontStyle: FontStyle.italic,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
+      h4: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 20,
+        fontWeight: FontWeight.w500,
+      ),
+      h5: const TextStyle(
+        color: Color(0xFFF8F8F2),
         fontSize: 18,
         fontWeight: FontWeight.w500,
       ),
-      h6: TextStyle(
-        color: Colors.white,
+      h6: const TextStyle(
+        color: Color(0xFFF8F8F2),
         fontSize: 16,
         fontWeight: FontWeight.w400,
       ),
+
+      // Paragraph
       p: const TextStyle(
-        color: Color.fromARGB(237, 255, 255, 255),
+        color: Color(0xFFDADCE0),
         fontSize: 15,
       ),
+
+      // Emphasis
       strong: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Color.fromARGB(255, 255, 255, 255),
-          letterSpacing: 1.05),
-      em: const TextStyle(
-        fontStyle: FontStyle.italic,
-        color: Color.fromARGB(255, 255, 255, 255),
+        color: Color(0xFFF8F8F2),
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
       ),
+      em: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontStyle: FontStyle.italic,
+      ),
+
+      // Lists
       listBullet: TextStyle(
         color: Colors.grey[300],
         fontSize: 14,
       ),
-      blockquote: TextStyle(
-        color: Colors.grey[200],
+
+      // Blockquote
+      blockquote: const TextStyle(
+        color: Color(0xFFDADCE0),
       ),
-      horizontalRuleDecoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            width: 2.0,
-            color: Colors.grey,
-          ),
-        ),
-      ),
-      a: const TextStyle(
-        color: Color.fromARGB(255, 8, 177, 255),
-        decoration: TextDecoration.underline,
-      ),
-      code: TextStyle(
-        color: const Color.fromARGB(255, 255, 255, 255),
-        fontFamily: 'Courier',
-        fontSize: 13,
-      ),
-      blockSpacing: 10.0,
       blockquoteDecoration: BoxDecoration(
-        color: const Color.fromARGB(255, 18, 18, 18),
+        color: const Color(0xFF2C2C2C),
         borderRadius: BorderRadius.circular(4.0),
-        border: Border(
+        border: const Border(
           left: BorderSide(
-            color: const Color.fromARGB(192, 145, 145, 145),
+            color: Color(0xFF8A8A8A),
             width: 4.0,
           ),
         ),
@@ -90,26 +84,57 @@ class MarkdownCustomStyle {
         horizontal: 16.0,
         vertical: 8.0,
       ),
-      codeblockPadding: const EdgeInsets.all(8.0),
+
+      // Horizontal Rule
+      horizontalRuleDecoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            width: 1.5,
+            color: Color(0xFF666666),
+          ),
+        ),
+      ),
+
+      // Links
+      a: const TextStyle(
+        color: Color(0xFF50B5FF),
+        decoration: TextDecoration.underline,
+      ),
+
+      // Inline code
+      code: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontFamily: 'Courier',
+        fontSize: 13,
+        backgroundColor: Color(0xFF3A3A3C),
+      ),
+
+      // Code blocks
+      codeblockPadding: const EdgeInsets.all(10.0),
       codeblockDecoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: const Color(0xFF3A3A3C),
         borderRadius: BorderRadius.circular(4.0),
       ),
-      tableHead: TextStyle(
+
+      // Tables
+      tableHead: const TextStyle(
         fontWeight: FontWeight.w600,
-        color: Colors.white70,
+        color: Color(0xFFF8F8F2),
       ),
       tableBody: const TextStyle(
-        color: Colors.white70,
+        color: Color(0xFFF8F8F2),
       ),
       tableCellsPadding: const EdgeInsets.symmetric(
         horizontal: 6.0,
         vertical: 4.0,
       ),
       tableBorder: TableBorder.all(
-        color: Colors.white54,
+        color: const Color(0xFFAAAAAA),
         width: 1.0,
       ),
+
+      // General spacing
+      blockSpacing: 10.0,
     );
   }
 }

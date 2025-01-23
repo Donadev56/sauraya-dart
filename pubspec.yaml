@@ -63,6 +63,13 @@ dependencies:
   google_fonts: ^6.2.1
   dio: ^5.2.0
   stream_transform: ^2.0.0
+  youtube_player_flutter: ^9.1.1
+  youtube_player_iframe: ^5.2.1
+  webview_flutter: ^4.0.0
+  youtube_player_embed: ^1.6.4
+  ulid: ^2.0.1
+  skeletonizer: ^1.4.3
+  flutter_skeleton_ui: ^0.0.6
 
 
 dev_dependencies:

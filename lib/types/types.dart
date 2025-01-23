@@ -1,21 +1,28 @@
+import 'package:sauraya/types/ollama.dart';
+
 typedef Messages = List<Message>;
 
 class Message {
   final String role;
   final String content;
   final List<String>? images;
+  final List<String>? videos;
+  final String? msgId;
 
-  Message({
-    required this.role,
-    required this.content,
-    this.images,
-  });
+  Message(
+      {required this.role,
+      required this.content,
+      this.images,
+      this.videos,
+      this.msgId});
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
       role: json['role'],
       content: json['content'],
       images: json['images'] != null ? List<String>.from(json['images']) : null,
+      videos: json['videos'] != null ? List<String>.from(json['videos']) : null,
+      msgId: json['msgId'],
     );
   }
 
@@ -24,6 +31,8 @@ class Message {
       'role': role,
       'content': content,
       'images': images,
+      'videos': videos,
+      'msgId': msgId
     };
   }
 }
@@ -33,12 +42,16 @@ class OllamaChatRequest {
   final Messages messages;
   final bool? stream;
   final String? token;
+  final List<Tool>? tools;
+  final bool? isWebSearch;
 
   OllamaChatRequest({
     required this.model,
     required this.messages,
     this.stream,
     this.token,
+    this.tools,
+    this.isWebSearch,
   });
 
   factory OllamaChatRequest.fromJson(Map<String, dynamic> json) {
@@ -48,6 +61,8 @@ class OllamaChatRequest {
           (json['messages'] as List).map((e) => Message.fromJson(e)).toList(),
       stream: json['stream'],
       token: json['token'],
+      tools: (json['tools'] as List).map((e) => Tool.fromJson(e)).toList(),
+      isWebSearch: json['isWebSearch'],
     );
   }
 
@@ -57,6 +72,8 @@ class OllamaChatRequest {
       'messages': messages.map((e) => e.toJson()).toList(),
       'stream': stream,
       'token': token,
+      'tools': tools?.map((e) => e.toJson()).toList(),
+      'isWebSearch': isWebSearch,
     };
   }
 }

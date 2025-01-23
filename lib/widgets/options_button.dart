@@ -17,12 +17,12 @@ class CustomButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.all(Radius.circular(15)),
+          borderRadius: BorderRadius.all(Radius.circular(45)),
           border: Border.all(color: color),
         ),
         margin: EdgeInsets.all(5.0),
         child: InkWell(
-          borderRadius: BorderRadius.all(Radius.circular(10)),
+          borderRadius: BorderRadius.all(Radius.circular(45)),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(10.0),

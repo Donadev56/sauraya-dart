@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/service/crypto.dart';
@@ -8,8 +6,9 @@ import 'package:sauraya/service/secure_storage.dart';
 List<String> availableModels = [
   "llama3.2:1b",
   "llama3.2",
-  "dolphin3",
-  "sauraya"
+  "deepseek-chat",
+  "deepseek-r1:7b",
+  "deepseek-r1:1.5b"
 ];
 
 List<String> startingConversions = [

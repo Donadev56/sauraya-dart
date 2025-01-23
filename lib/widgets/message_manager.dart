@@ -1,11 +1,17 @@
+import 'dart:io';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
-
+import 'package:path_provider/path_provider.dart';
+import 'package:youtube_player_embed/controller/video_controller.dart';
+import 'package:youtube_player_embed/enum/video_state.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import 'package:dio/dio.dart';
+import 'package:youtube_player_embed/youtube_player_embed.dart';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/types/types.dart';
 import 'package:sauraya/utils/remove_markdown.dart';
@@ -13,10 +19,15 @@ import 'package:sauraya/utils/snackbar_manager.dart';
 import 'package:sauraya/widgets/code_custom_style.dart';
 import 'package:sauraya/widgets/styleSheet_widget.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart' as yP;
+import 'package:flutter_skeleton_ui/flutter_skeleton_ui.dart';
 
 typedef ExecutePythonCode = Future<void> Function(String codeToExecute);
 typedef RegenerateType = Future<void> Function(int msgIndex);
+typedef ChangeUrl = void Function(String url);
+typedef InitController = void Function(VideoController controller, String id);
+typedef VideoPlayingStateType = void Function(bool isplaying);
+typedef ControllerManagerType = void Function(String id);
 
 class MessageManager extends StatelessWidget {
   final Messages messages;
@@ -30,6 +41,11 @@ class MessageManager extends StatelessWidget {
   final bool isExec;
   final RegenerateType regenerate;
   final String titleFound;
+  final InitController initController;
+  final ControllerManagerType stopPlayingVideo;
+  final ControllerManagerType playVideo;
+  final VideoPlayingStateType videoPlayingState;
+  final bool isPlayingVideo;
 
   const MessageManager({
     super.key,
@@ -44,6 +60,11 @@ class MessageManager extends StatelessWidget {
     required this.isExec,
     required this.regenerate,
     required this.titleFound,
+    required this.initController,
+    required this.stopPlayingVideo,
+    required this.playVideo,
+    required this.videoPlayingState,
+    required this.isPlayingVideo,
   });
 
   @override
@@ -51,7 +72,15 @@ class MessageManager extends StatelessWidget {
     final bool isAssistant = messages[index].role == 'assistant';
     final bool isUser = messages[index].role == 'user';
     final bool isThinkingLoader = messages[index].role == 'thinkingLoader';
+    final List<String>? videos = messages[index].videos;
     final String msg = messages[index].content;
+    final message = messages[index];
+    var random = Random();
+
+    String convertUrl(String url) {
+      final videoId = yP.YoutubePlayer.convertUrlToId(url);
+      return videoId ?? "";
+    }
 
     if (isAssistant) {
       return InkWell(
@@ -132,7 +161,7 @@ class MessageManager extends StatelessWidget {
                       .size
                       .width, // Contraintes explicites
                   minHeight: messages.length == index + 1
-                      ? MediaQuery.of(context).size.height * 0.6
+                      ? MediaQuery.of(context).size.height * 0.64
                       : 0),
               child: Row(
                 mainAxisSize: MainAxisSize.min, // Adapte la taille au contenu
@@ -153,39 +182,85 @@ class MessageManager extends StatelessWidget {
                   const SizedBox(
                       width: 10), // Espacement entre l'image et le texte
                   Expanded(
-                    child: MarkdownBody(
-                      data: msg,
-                      styleSheet: MarkdownCustomStyle.customStyle,
-                      builders: {
-                        'code': CodeElementBuilder(
-                            isExec: isExec,
-                            executePythonCode: executePythonCode,
-                            textColor: secondaryColor,
-                            context: context,
-                            isGeneratingResponse: isGeneratingResponse),
-                      },
-                      onTapLink: (text, href, title) async {
-                        try {
-                          log("Launching the url : $href");
-                          if (href != null) {
-                            Uri url = Uri.parse(href);
-
-                            launchUrl(url);
-                          } else {
-                            log("The url is not available");
-                          }
-                        } catch (e) {
-                          logError("An error occurred $e");
-                          showCustomSnackBar(
+                      child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MarkdownBody(
+                        data: msg,
+                        styleSheet: MarkdownCustomStyle.customStyle,
+                        builders: {
+                          'code': CodeElementBuilder(
+                              isExec: isExec,
+                              executePythonCode: executePythonCode,
+                              textColor: secondaryColor,
                               context: context,
-                              message: e.toString(),
-                              backgroundColor: Color(0xFF212121),
-                              icon: Icons.error,
-                              iconColor: Colors.red);
-                        }
-                      },
-                    ),
-                  ),
+                              isGeneratingResponse: isGeneratingResponse),
+                          'img': CustomImageBuilder(context: context)
+                        },
+                        onTapLink: (text, href, title) async {
+                          try {
+                            log("Launching the url : $href");
+                            if (href != null) {
+                              Uri url = Uri.parse(href);
+
+                              launchUrl(url);
+                            } else {
+                              log("The url is not available");
+                            }
+                          } catch (e) {
+                            logError("An error occurred $e");
+                            showCustomSnackBar(
+                                context: context,
+                                message: e.toString(),
+                                backgroundColor: Color(0xFF212121),
+                                icon: Icons.error,
+                                iconColor: Colors.red);
+                          }
+                        },
+                      ),
+                      if (videos != null && videos.isNotEmpty)
+                        InkWell(
+                          onTap: () {
+                            log("current state $isPlayingVideo");
+                            if (isPlayingVideo) {
+                              stopPlayingVideo(message.msgId ?? "");
+                            } else {
+                              playVideo(message.msgId ?? "");
+                            }
+                          },
+                          child: Column(
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.all(15),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: YoutubePlayerEmbed(
+                                    autoPlay: false,
+                                    videoId: convertUrl(videos[
+                                        random.nextInt(videos.length - 1)]),
+                                    callBackVideoController: (controller) {
+                                      initController(
+                                          controller, message.msgId ?? "");
+                                    },
+                                    onVideoStateChange: (state) {
+                                      log("Current state $state");
+                                      if (state == VideoState.playing) {
+                                        videoPlayingState(true);
+                                      } else if (state == VideoState.paused) {
+                                        videoPlayingState(false);
+                                      }
+                                    },
+                                    onVideoEnd: () {
+                                      videoPlayingState(false);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                    ],
+                  )),
                 ],
               ),
             )),
@@ -241,8 +316,17 @@ class MessageManager extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LoadingAnimationWidget.fourRotatingDots(
-                      color: Colors.white, size: 40),
+                  SkeletonParagraph(
+                      style: SkeletonParagraphStyle(
+                          lines: 3,
+                          spacing: 6,
+                          lineStyle: SkeletonLineStyle(
+                            randomLength: true,
+                            height: 10,
+                            borderRadius: BorderRadius.circular(8),
+                            minLength: MediaQuery.of(context).size.width / 6,
+                            maxLength: MediaQuery.of(context).size.width / 3,
+                          ))),
                   SizedBox(
                     height: 10,
                   ),
@@ -293,6 +377,9 @@ class CodeElementBuilder extends MarkdownElementBuilder {
     }
 
     return Container(
+      margin: language == "plaintext"
+          ? const EdgeInsets.all(10)
+          : const EdgeInsets.all(0),
       decoration: BoxDecoration(
         color: const Color(0XFF191919),
       ),
@@ -359,6 +446,65 @@ class CodeElementBuilder extends MarkdownElementBuilder {
             height: 20,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class CustomImageBuilder extends MarkdownElementBuilder {
+  final BuildContext context;
+
+  CustomImageBuilder({required this.context});
+
+  Future<void> downloadImage(String url, String fileName) async {
+    try {
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = await getExternalStorageDirectory();
+      } else if (Platform.isIOS) {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      if (directory == null) {
+        log("Can not find application or  documents directory");
+        return;
+      }
+
+      String filePath = "${directory.path}/$fileName";
+
+      Dio dio = Dio();
+      await dio.download(url, filePath);
+      log("file saved to:   $filePath");
+      showCustomSnackBar(
+          context: context,
+          message: "File saved ",
+          iconColor: Colors.greenAccent,
+          icon: Icons.check_circle);
+    } catch (e) {
+      log("An error occured while downloading the file : $e");
+      showCustomSnackBar(
+          context: context,
+          message: "Error while downloading the file",
+          iconColor: Colors.pinkAccent,
+          icon: Icons.error);
+    }
+  }
+
+  @override
+  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final String? imageUrl = element.attributes['src'];
+    return GestureDetector(
+      onTap: () {
+        Uri url = Uri.parse(imageUrl ?? "");
+
+        launchUrl(url);
+      },
+      child: Container(
+        margin: EdgeInsets.all(8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(imageUrl ?? ''),
+        ),
       ),
     );
   }

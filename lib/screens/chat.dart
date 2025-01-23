@@ -23,6 +23,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:sauraya/service/data_saver.dart';
+import 'package:youtube_player_embed/controller/video_controller.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -53,15 +54,20 @@ class _ChatScreenState extends State<ChatScreen> {
   String conversationTitle = "";
   String searchInput = "";
   bool hasGenerateAtLastOne = true;
-  bool isBottom = false ;
+  bool isBottom = false;
+  bool isWebSearch = false;
 
-  String currentModel = availableModels[0];
+  String currentModel = availableModels[2];
 
   Conversations conversations = Conversations(conversations: {});
 
   late AudioPlayer audioPlayer;
 
   bool isGeneratingResponse = false;
+
+  Map<String, VideoController> controllers = {};
+
+  bool isVideoPlaying = false;
 
   void stopGenerationWithoutSocket() async {
     try {
@@ -235,20 +241,19 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _onScroll() {
-  final currentPosition = _messagesScrollController.position.pixels;
-  final maxPosition = _messagesScrollController.position.maxScrollExtent;
+    final currentPosition = _messagesScrollController.position.pixels;
+    final maxPosition = _messagesScrollController.position.maxScrollExtent;
 
-  if (currentPosition >= maxPosition) {
-    setState(() {
-      isBottom = true ;
-    });
-  } else {
-    setState(() {
-      isBottom = false ;
-    });
+    if (currentPosition >= maxPosition) {
+      setState(() {
+        isBottom = true;
+      });
+    } else {
+      setState(() {
+        isBottom = false;
+      });
+    }
   }
-}
-
 
   Future<void> getConversations() async {
     try {
@@ -279,7 +284,6 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         final conv = conversations.conversations[convId];
         if (conv != null) {
-          messages = conv.messages;
           conversationId = convId;
           conversationTitle = conv.title;
           isGeneratingResponse = false;
@@ -290,6 +294,25 @@ class _ChatScreenState extends State<ChatScreen> {
           prompt = "";
           _textController.text = "";
           audioPlayer.stop();
+          Messages newMessages = [];
+
+          for (int i = 0; i < conv.messages.length; i++) {
+            final msg = conv.messages[i];
+            String? id = msg.msgId;
+
+            if (msg.msgId == null) {
+              id = generateUUID();
+            } else {
+              id = msg.msgId;
+            }
+            Message newMessage = Message(
+                role: msg.role,
+                content: msg.content,
+                msgId: id,
+                videos: msg.videos);
+            newMessages.add(newMessage);
+          }
+          messages = newMessages;
         }
       });
     } catch (e) {
@@ -324,6 +347,12 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void initController(VideoController controller, String id) {
+    setState(() {
+      controllers[id] = controller;
+    });
+  }
+
   Future<void> sendInitialMessage() async {
     try {
       Message sysMessage = Message(
@@ -332,7 +361,8 @@ class _ChatScreenState extends State<ChatScreen> {
               "$systemMessage + . the current name of the user you are talking with is ${user.name}, So know what you can do is reply to messages , You can call him by his name .  ");
 
       Messages lastMessages = [...messages];
-      Message newMessage = Message(role: "user", content: prompt);
+      Message newMessage =
+          Message(role: "user", content: prompt, msgId: generateUUID());
 
       if (lastMessages.isEmpty) {
         lastMessages.add(sysMessage);
@@ -343,8 +373,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
       updateState(
           updatedMessages: lastMessages, newPrompt: "", controllerText: "");
-
-      chat(lastMessages);
+      if (isWebSearch) {
+        searchData(lastMessages);
+      } else {
+        await chat(lastMessages);
+      }
     } catch (e) {
       logError(e.toString());
     }
@@ -375,11 +408,21 @@ class _ChatScreenState extends State<ChatScreen> {
       OllamaChatRequest newChatRequest = OllamaChatRequest(
           messages: lastMessages,
           model: currentModel,
+          isWebSearch: isWebSearch,
           stream: true,
           token: user.token);
 
-      final request = await client
-          .postUrl(Uri.parse("https://chat.sauraya.com/chat/message"));
+      HttpClientRequest request;
+      log("Current model : $currentModel");
+      if (currentModel != availableModels[2]) {
+        log("Using default models");
+        request = await client
+            .postUrl(Uri.parse("http://46.202.175.219:7001/chat/message"));
+      } else {
+        log("Using deepSeek model");
+        request = await client.postUrl(
+            Uri.parse("http://46.202.175.219:7001/chat/message/dSeek"));
+      }
 
       request.headers.contentType = ContentType.json;
 
@@ -444,6 +487,26 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 if (done) {
                   updateState(isGenerating: false, numberOfResponse: 0);
+                  final regex = RegExp(
+                    r"(https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/[^\s\)]+)",
+                    caseSensitive: false,
+                  );
+                  final matches = regex.allMatches(newText);
+                  final videos =
+                      matches.map((match) => match.group(0) ?? "").toList();
+
+                  Message newMessageWithVideos = Message(
+                      role: 'assistant',
+                      content: newText,
+                      videos: videos,
+                      msgId: generateUUID());
+
+                  log("message ${(newMessageWithVideos.toJson()).toString()}");
+
+                  lastMessages[messages.length - 1] = newMessageWithVideos;
+                  setState(() {
+                    messages = lastMessages;
+                  });
 
                   scrollToBottom(_messagesScrollController);
                   updateMessages();
@@ -474,6 +537,61 @@ class _ChatScreenState extends State<ChatScreen> {
         numberOfResponse: 0,
       );
       stopGenerationWithoutSocket();
+    }
+  }
+
+  Future<void> searchData(Messages lastMessages) async {
+    try {
+      log("Searching for data $prompt");
+
+      hasGenerateAtLastOne = false;
+
+      setState(() {
+        Message thinkingLoader =
+            Message(role: "thinkingLoader", content: "Thinking");
+        messages = [...lastMessages, thinkingLoader];
+        prompt = "";
+        isGeneratingResponse = true;
+
+        _textController.clear();
+
+        scrollToBottom(_messagesScrollController);
+      });
+
+      OllamaChatRequest newChatRequest = OllamaChatRequest(
+          messages: lastMessages,
+          model: currentModel,
+          isWebSearch: isWebSearch,
+          stream: true,
+          token: user.token);
+
+      final response = await http.post(
+          Uri.parse("http://46.202.175.219:7001/chat/message/search"),
+          headers: {"Content-Type": "application/json"},
+          body: json.encode(newChatRequest.toJson()));
+      final text = json.decode(response.body)["result"];
+
+      if (response.statusCode == 200) {
+        log("Message received ");
+        hasGenerateAtLastOne = true;
+
+        setState(() {
+          Message newMessage = Message(role: "assistant", content: text);
+          final lastMessages = [...messages];
+          lastMessages.removeWhere((msg) => msg.role == "thinkingLoader");
+
+          messages = [...lastMessages, newMessage];
+          currentNumberOfResponse++;
+
+          scrollToBottom(_messagesScrollController);
+
+          updateState(isGenerating: false, numberOfResponse: 0);
+
+          updateMessages();
+        });
+      }
+    } catch (e) {
+      logError(e.toString());
     }
   }
 
@@ -528,6 +646,27 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     } catch (e) {
       log("Error while removing conversation $e");
+    }
+  }
+
+  void stopPlayingVideo(String id) {
+    final controller = controllers[id];
+    if (controller != null) {
+      controller.pauseVideo();
+      setState(() {
+        isVideoPlaying = false;
+      });
+    }
+  }
+
+  void playVideo(String id) {
+    log("Playin video of id :$id");
+    final controller = controllers[id];
+    if (controller != null) {
+      controller.playVideo();
+      setState(() {
+        isVideoPlaying = true;
+      });
     }
   }
 
@@ -588,6 +727,16 @@ class _ChatScreenState extends State<ChatScreen> {
       updateState(audioLoading: false);
       if (!mounted) return;
     }
+  }
+
+  void changeIsplayingState(bool isplaying) {
+    setState(() {
+      isVideoPlaying = isplaying;
+    });
+  }
+
+  void updateVideoController(String id, VideoController controller) {
+    setState(() {});
   }
 
   void stopPlaying() async {
@@ -900,6 +1049,11 @@ class _ChatScreenState extends State<ChatScreen> {
                         itemCount: messages.length,
                         itemBuilder: (BuildContext context, int i) {
                           return MessageManager(
+                            isPlayingVideo: isVideoPlaying,
+                            stopPlayingVideo: stopPlayingVideo,
+                            playVideo: playVideo,
+                            videoPlayingState: changeIsplayingState,
+                            initController: initController,
                             titleFound: conversationTitle,
                             regenerate: regenerateWithoutSocket,
                             key: ValueKey(messages[i]),
@@ -932,20 +1086,48 @@ class _ChatScreenState extends State<ChatScreen> {
                   children: [
                     ClipRRect(
                         borderRadius: BorderRadius.all(Radius.circular(50)),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(color: Colors.grey),
-                          child: IconButton(
-                            onPressed: () {
-                              showCustomSnackBar(
-                                  context: context,
-                                  message: "Coming soon!",
-                                  iconColor: Colors.yellow);
-                            },
-                            icon: Icon(Icons.image),
-                            color: Colors.white,
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              isWebSearch = !isWebSearch;
+                              if (currentModel != availableModels[2]) {
+                                currentModel = availableModels[2];
+                              }
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: Duration(milliseconds: 500),
+                            padding: isWebSearch
+                                ? const EdgeInsets.only(right: 5)
+                                : const EdgeInsets.all(0),
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                            ),
+                            child: Row(
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 37,
+                                  height: 37,
+                                  decoration: BoxDecoration(
+                                      color: isWebSearch
+                                          ? Colors.blue
+                                          : Colors.grey),
+                                  child: Icon(
+                                    FeatherIcons.globe,
+                                    size: 20,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                if (isWebSearch)
+                                  Text(
+                                    "Search",
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
+                                  )
+                              ],
+                            ),
                           ),
                         )),
                     SizedBox(
@@ -1089,32 +1271,33 @@ class _ChatScreenState extends State<ChatScreen> {
                     currentPosition: _position,
                   ),
                 )),
-
-      if (!isBottom && _messagesScrollController.hasClients)    Positioned(
-            top:MediaQuery.of(context).size.height * 0.70 ,
-            left: MediaQuery.of(context).size.width * 0.45,
-          child:
-          InkWell(
-            onTap: (){
-              scrollToBottom(_messagesScrollController);
-              setState(() {
-                isBottom = true ;
-              });
-            },
-          child: ClipPath(
-            child: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                 borderRadius: BorderRadius.circular(50),
-                color: Color(0XFF212121)
-              ),
-              child: Center(
-                child: Icon(FeatherIcons.chevronDown, color: Colors.white,),
-              ),
-            ),
-          ),
-          ))
+          if (!isBottom && _messagesScrollController.hasClients)
+            Positioned(
+                top: MediaQuery.of(context).size.height * 0.70,
+                left: MediaQuery.of(context).size.width * 0.45,
+                child: InkWell(
+                  onTap: () {
+                    scrollToBottom(_messagesScrollController);
+                    setState(() {
+                      isBottom = true;
+                    });
+                  },
+                  child: ClipPath(
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(50),
+                          color: Color(0XFF212121)),
+                      child: Center(
+                        child: Icon(
+                          FeatherIcons.chevronDown,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ))
         ],
       ),
     );
