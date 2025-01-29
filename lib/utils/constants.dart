@@ -15,6 +15,9 @@ List<String> startingConversions = [
   "Summarize the lifestyle a person should adopt to be successful in life.",
   "Teach me how to do data analysis as a data analyst and the tools needed to use it",
   "think of something I probably don't know that you're teaching me today",
+  "Search YouTube for recipes to cook a nice family meal.",
+  "What's the news in recent days?",
+  "I'm looking for pictures of beautiful landscapes to see."
 ];
 
 Color primaryColor = Color(0xFF0D0D0D);

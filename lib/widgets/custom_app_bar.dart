@@ -35,7 +35,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
         onPressed: () {
           Scaffold.of(context).openDrawer();
         },
-        icon: Icon(FeatherIcons.alignLeft),
+        icon: Icon(FeatherIcons.sidebar),
         color: secondaryColor,
       ),
       title: Row(
@@ -43,6 +43,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           TextButton(
               onPressed: () async {
                 String? selected = await showMenu(
+                  color: Color(0XFF212121),
                   context: context,
                   position: RelativeRect.fromLTRB(60, 100, 100, 100),
                   items: availableModels.map((model) {
@@ -53,13 +54,13 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           if (model == currentModel)
-                            Icon(Icons.check_circle, color: Colors.black),
+                            Icon(Icons.check_circle, color: Colors.white),
                           SizedBox(
                             width: 5,
                           ),
                           Text(
                             model,
-                            style: TextStyle(color: Colors.black),
+                            style: TextStyle(color: Colors.white),
                           ),
                         ],
                       ),

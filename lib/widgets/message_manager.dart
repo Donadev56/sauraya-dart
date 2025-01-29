@@ -153,7 +153,7 @@ class MessageManager extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(10),
             margin: messages.length == index + 1
-                ? const EdgeInsets.only(top: 5, bottom: 100)
+                ? const EdgeInsets.only(top: 5, bottom: 105)
                 : const EdgeInsets.all(0),
             child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -161,7 +161,7 @@ class MessageManager extends StatelessWidget {
                       .size
                       .width, // Contraintes explicites
                   minHeight: messages.length == index + 1
-                      ? MediaQuery.of(context).size.height * 0.64
+                      ? MediaQuery.of(context).size.height * 0.65
                       : 0),
               child: Row(
                 mainAxisSize: MainAxisSize.min, // Adapte la taille au contenu
