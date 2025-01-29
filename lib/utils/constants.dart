@@ -7,7 +7,6 @@ List<String> availableModels = [
   "llama3.2:1b",
   "llama3.2",
   "deepseek-chat",
-  "deepseek-r1:7b",
   "deepseek-r1:1.5b"
 ];
 

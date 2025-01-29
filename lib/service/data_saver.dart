@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/service/crypto.dart';
 import 'package:sauraya/service/directory.dart';
+import 'package:sauraya/service/web.dart';
 import 'package:sauraya/types/types.dart';
+import 'package:flutter/foundation.dart';
 
 const databaseKey = "database";
 const fileName = "sauraya.crypt";
@@ -17,12 +19,27 @@ class ConversationManager {
           await encryptJson(jsonEncode(conversations.toJson()), key);
 
       if (encryptedConversations != null) {
-        final result = await storageService.saveStringData(
-            databaseKey, encryptedConversations, "$userId-$fileName");
-        if (result != null) {
-          log("Data stored successfully in $result");
+        dynamic result;
+        if (kIsWeb) {
+          // Web Storage API is used in Flutter Web
+          result = saveToWebStorage("userData/$userId", encryptedConversations);
+          if (result == true) {
+            log("Data stored successfully in $result");
+          } else {
+            logError("Failed to store data");
+          }
         } else {
-          logError("Failed to store data");
+          // External storage is used in Flutter mobile or desktop
+          result = await storageService.saveStringData(
+            databaseKey,
+            encryptedConversations,
+            "$userId-$fileName",
+          );
+          if (result != null) {
+            log("Data stored successfully in $result");
+          } else {
+            logError("Failed to store data");
+          }
         }
       } else {
         logError("Failed to encrypt conversations.");
@@ -36,8 +53,16 @@ class ConversationManager {
       String userId, String savedKey) async {
     try {
       final storageService = LocalStorageService();
-      final savedData =
-          await storageService.getStringData(databaseKey, "$userId-$fileName");
+      dynamic savedData;
+      if (kIsWeb) {
+        // Web Storage API is used in Flutter Web
+        savedData = getWebStorageData("userData/$userId");
+      } else {
+        // External storage is used in Flutter mobile or desktop
+
+        savedData = await storageService.getStringData(
+            databaseKey, "$userId-$fileName");
+      }
 
       log("Saved data: $savedData");
 

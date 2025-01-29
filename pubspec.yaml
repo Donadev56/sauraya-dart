@@ -54,7 +54,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   encrypt: ^5.0.3
   crypto: ^3.0.5
-  shared_preferences: ^2.0.15 
+  shared_preferences: ^2.4.0 
   cryptography_flutter: ^2.3.2
   uuid: ^4.5.1
   url_launcher: ^6.0.20
