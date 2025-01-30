@@ -8,22 +8,27 @@ class Message {
   final List<String>? images;
   final List<String>? videos;
   final String? msgId;
+  final String? code;
 
-  Message(
-      {required this.role,
-      required this.content,
-      this.images,
-      this.videos,
-      this.msgId});
+  Message({
+    required this.role,
+    required this.content,
+    this.images,
+    this.videos,
+    this.msgId,
+    this.code,
+  });
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
-      role: json['role'],
-      content: json['content'],
-      images: json['images'] != null ? List<String>.from(json['images']) : null,
-      videos: json['videos'] != null ? List<String>.from(json['videos']) : null,
-      msgId: json['msgId'],
-    );
+        role: json['role'],
+        content: json['content'],
+        images:
+            json['images'] != null ? List<String>.from(json['images']) : null,
+        videos:
+            json['videos'] != null ? List<String>.from(json['videos']) : null,
+        msgId: json['msgId'],
+        code: json['code']);
   }
 
   Map<String, dynamic> toJson() {
@@ -32,7 +37,8 @@ class Message {
       'content': content,
       'images': images,
       'videos': videos,
-      'msgId': msgId
+      'msgId': msgId,
+      'code': code,
     };
   }
 }

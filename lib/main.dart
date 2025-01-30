@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/screens/auth.dart';
 import 'package:sauraya/screens/chat.dart';
+import 'package:sauraya/screens/website_creator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -12,6 +13,7 @@ class Routes {
   static const String chatRoom = '/dashboard/chat';
   static const String loader = '/loader';
   static const String registration = '/auth';
+  static const String websiteBuilder = '/dashboard/website_builder';
 }
 
 Future<bool> isLogin() async {
@@ -56,7 +58,11 @@ class Sauraya extends StatelessWidget {
                 useMaterial3: true,
               ),
               home: isLoginBool ? const ChatScreen() : const AuthScreen(),
-              routes: {Routes.chatRoom: (context) => ChatScreen()},
+              routes: {
+                Routes.chatRoom: (context) => ChatScreen(),
+                Routes.registration: (context) => const AuthScreen(),
+                Routes.websiteBuilder: (context) => const WebisteCreator()
+              },
             );
           }
         });

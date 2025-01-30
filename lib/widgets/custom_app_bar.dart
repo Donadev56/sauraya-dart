@@ -13,6 +13,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
   final List<String> availableModels;
   final ChangeModelType changeModel;
   final String userId;
+  final String spaceName;
 
   const TopBar({
     super.key,
@@ -23,6 +24,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
     required this.availableModels,
     required this.changeModel,
     required this.userId,
+    required this.spaceName,
   });
 
   @override
@@ -75,7 +77,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
               child: Row(
                 children: [
                   Text(
-                    "Sauraya Ai",
+                    spaceName,
                     style: TextStyle(
                       color: secondaryColor,
                       fontSize: 19,

@@ -484,15 +484,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   String newText = lastMessages[index].content + textResponse;
 
                   Message newMessage = Message(
-                      msgId: lastMessages[index]
-                          .msgId, 
+                      msgId: lastMessages[index].msgId,
                       content: newText,
                       role: "assistant");
                   setState(() {
-                    lastMessages[index] =
-                        newMessage; 
-                    messages =
-                        lastMessages; 
+                    lastMessages[index] = newMessage;
+                    messages = lastMessages;
                     currentNumberOfResponse++;
                   });
 
@@ -749,10 +746,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void updateVideoController(String id, VideoController controller) {
-    setState(() {});
-  }
-
   void stopPlaying() async {
     try {
       audioPlayer.stop();
@@ -957,6 +950,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: primaryColor,
       appBar: TopBar(
+          spaceName: "Sauraya Ai",
           userId: user.userId,
           changeModel: changeModel,
           availableModels: availableModels,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:sauraya/screens/chat.dart';
 import 'package:sauraya/screens/website_creator.dart';
 import 'package:sauraya/types/types.dart';
 
@@ -7,7 +9,7 @@ typedef LoadConvType = Future Function(String convId);
 typedef RmConvType = Future<void> Function(String);
 typedef UpdateInputType = void Function(String value);
 
-class SideBard extends StatelessWidget {
+class SideBarWB extends StatelessWidget {
   final RmConvType onTap;
   final LoadConvType onOpen;
   final Conversations conversations;
@@ -17,7 +19,7 @@ class SideBard extends StatelessWidget {
   final UpdateInputType updateInput;
   final String name;
 
-  const SideBard(
+  const SideBarWB(
       {super.key,
       required this.onTap,
       required this.onOpen,
@@ -113,7 +115,10 @@ class SideBard extends StatelessWidget {
                         color: Color(0XFF212121), // Définir la couleur ici
                         child: InkWell(
                           onTap: () {
-                            Navigator.pop(context);
+                            Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => ChatScreen()));
                             startConv();
                           },
                           child: Padding(
@@ -196,10 +201,34 @@ class SideBard extends StatelessWidget {
                   ],
                 )),
           ),
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Align(
+                alignment: Alignment.topLeft,
+                child: Row(
+                  children: [
+                    Text(
+                      "Projects",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(width: 10),
+                    Icon(
+                      FontAwesomeIcons.folderOpen,
+                      color: Colors.white,
+                    )
+                  ],
+                )),
+          ),
+          Divider(
+            color: const Color.fromARGB(45, 255, 255, 255),
+          ),
           if (conversations.conversations.isNotEmpty)
             ConstrainedBox(
               constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.62),
+                  maxHeight: MediaQuery.of(context).size.height * 0.51),
               child: ListView.builder(
                   itemCount: filteredConversations.length,
                   itemBuilder: (BuildContext context, int i) {
@@ -225,7 +254,7 @@ class SideBard extends StatelessWidget {
                   height: 35,
                   child: Center(
                     child: Text(
-                      name.substring(0, 2).toUpperCase(),
+                      name.isNotEmpty ? name.substring(0, 2).toUpperCase() : "",
                       style: TextStyle(
                           color: Colors.black, fontWeight: FontWeight.bold),
                     ),
