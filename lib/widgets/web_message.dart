@@ -8,7 +8,7 @@ import 'package:sauraya/utils/snackbar_manager.dart';
 import 'package:sauraya/widgets/options_button.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-typedef ChangePromptType = void Function (String text);
+typedef ChangePromptType = void Function(String text);
 
 class MessageManagerWB extends StatelessWidget {
   final Messages messages;
@@ -20,7 +20,6 @@ class MessageManagerWB extends StatelessWidget {
     required this.messages,
     required this.webViewController,
     required this.changePrompt,
-    
   });
 
   @override
@@ -47,17 +46,18 @@ class MessageManagerWB extends StatelessWidget {
                             text: "Blog...",
                             color: Colors.pinkAccent,
                             onTap: () {
-                            final text = "I need a blog website, with all the necessary information that can be found on a blog site and use this image as a background: https://sauraya.com/blo.png.";
-                            changePrompt(text);
+                              final text =
+                                  "I need a blog website, with all the necessary information that can be found on a blog site and use this image as a background: https://sauraya.com/blo.png.";
+                              changePrompt(text);
                             }),
                         CustomButton(
                             icon: Icons.restaurant,
                             text: "Restaurant...",
                             color: Colors.greenAccent,
                             onTap: () {
-                              final text = "I need a restaurant website, with all the necessary information that can be found on a restaurant website and use this image as a background: https://sauraya.com/res.png and also this image https://sauraya.com/res2.png";
+                              final text =
+                                  "I need a restaurant website, with all the necessary information that can be found on a restaurant website and use this image as a background: https://sauraya.com/res.png and also this image https://sauraya.com/res2.png";
                               changePrompt(text);
-
                             }),
                       ],
                     )
@@ -74,35 +74,32 @@ class MessageManagerWB extends StatelessWidget {
                   final message = messages[i];
 
                   if (isUser) {
-                    return  InkWell(
-                      onLongPress: (){
-
-                          Clipboard.setData(ClipboardData(
-                                      text: message.content ))
-                                  .then((_) {
-                                showCustomSnackBar(
-                                    context: context,
-                                    message: "Copied",
-                                    backgroundColor: Color(0XFF0D0D0D),
-                                    icon: Icons.check_circle,
-                                    iconColor: Colors.greenAccent);
-                              });
-                        
+                    return InkWell(
+                      onLongPress: () {
+                        Clipboard.setData(ClipboardData(text: message.content))
+                            .then((_) {
+                          showCustomSnackBar(
+                              context: context,
+                              message: "Copied",
+                              backgroundColor: Color(0XFF0D0D0D),
+                              icon: Icons.check_circle,
+                              iconColor: Colors.greenAccent);
+                        });
                       },
-                      child:  Align(
-                      alignment: Alignment.topRight,
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        margin: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: Color(0XFF212121)),
-                        child: Text(
-                          content,
-                          style: TextStyle(color: Colors.white),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          margin: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: Color(0XFF212121)),
+                          child: Text(
+                            content,
+                            style: TextStyle(color: Colors.white),
+                          ),
                         ),
                       ),
-                    ) ,
                     );
                   } else if (isAssistant) {
                     return Ink(

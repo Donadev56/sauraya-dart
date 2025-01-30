@@ -70,6 +70,7 @@ dependencies:
   skeletonizer: ^1.4.3
   flutter_skeleton_ui: ^0.0.6
   webview_flutter: ^4.10.0
+  google_sign_in: ^6.2.2
 
 
 dev_dependencies:
@@ -95,7 +96,9 @@ flutter:
    - assets/bg/back6.jpg
    - assets/bg/bg.png
    - assets/bg/green_blur.png
+   - assets/bg/blur1.png
    - assets/logo/google1.png
+   
 
    
    
@@ -138,11 +141,17 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 flutter_native_splash:
   color: "#000000" 
-  image: assets/logo2.png
+  image: assets/icon.png
   android: true
   ios: true
+  
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/logo2.png"
+  image_path: "assets/icon.png"
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"

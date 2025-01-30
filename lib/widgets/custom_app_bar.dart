@@ -95,6 +95,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           color: secondaryColor,
         ),
         PopupMenuButton(
+          color: Colors.pinkAccent,
           icon: Icon(FeatherIcons.moreVertical),
           iconColor: secondaryColor,
           onSelected: (value) async {
@@ -106,10 +107,13 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           },
           itemBuilder: (BuildContext context) => const [
             PopupMenuItem(
+              
               child: Row(
+                
                 children: [
-                  Icon(Icons.logout),
-                  Text('Logout'),
+                  Icon(Icons.logout, color: Colors.white,),
+                  SizedBox(width: 10,) ,
+                  Text('Logout', style: TextStyle(color: Colors.white),),
                 ],
               ),
               value: 'logout',

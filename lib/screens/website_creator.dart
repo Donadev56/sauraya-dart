@@ -124,9 +124,9 @@ class _WebisteCreatorState extends State<WebisteCreator> {
       }
       if (newMessages.length > 6) {
         newMessages = newMessages.sublist(newMessages.length - 6);
-      Message sysMessage = Message(role: "system", content: codeSystemPrompt);
+        Message sysMessage = Message(role: "system", content: codeSystemPrompt);
 
-        newMessages.insert(0,sysMessage );
+        newMessages.insert(0, sysMessage);
       } else {
         lastMessages = newMessages;
       }
@@ -188,7 +188,7 @@ class _WebisteCreatorState extends State<WebisteCreator> {
     }
   }
 
-  void changePrompt (String text) {
+  void changePrompt(String text) {
     setState(() {
       prompt = text;
       _textController.text = prompt;
@@ -701,7 +701,8 @@ class _WebisteCreatorState extends State<WebisteCreator> {
                                                     : Icons.arrow_upward,
                                                 color: Colors.white,
                                               )),
-                                          hintText: "what do you want to create?",
+                                          hintText:
+                                              "what do you want to create?",
                                           hintStyle: TextStyle(
                                             color: Colors.white70,
                                             fontStyle: FontStyle.italic,

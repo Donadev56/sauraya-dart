@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sauraya/logger/logger.dart';
 import 'package:sauraya/screens/chat.dart';
 import 'package:sauraya/service/secure_storage.dart';
 import 'package:sauraya/types/types.dart';
+import 'package:sauraya/utils/auth_service.dart';
 import 'package:sauraya/utils/snackbar_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,15 +23,47 @@ String email = "";
 String name = "";
 String otp = "";
 bool isLoading = false;
+bool isSendingOtp = false;
 int step = 1;
 String url = "https://chat.sauraya.com";
 
 class _AuthScreenState extends State<AuthScreen> {
+  FocusNode focusNode = FocusNode();
+  FocusNode focusNode2 = FocusNode();
+  bool isFocus = false;
+  bool isFocus2 = false;
+
+  @override
+  void dispose() {
+    super.dispose();
+    focusNode.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    focusNode.addListener(() {
+      setState(() {
+        isFocus = focusNode.hasFocus;
+      });
+    });
+    focusNode2.addListener(() {
+      setState(() {
+        isFocus2 = focusNode2.hasFocus;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+
+    
+
+
     Future<void> sendEmail() async {
       setState(() {
         isLoading = false;
+        isSendingOtp = true ;
       });
 
       try {
@@ -53,6 +87,7 @@ class _AuthScreenState extends State<AuthScreen> {
           setState(() {
             step = 2;
             isLoading = false;
+            isSendingOtp = false;
           });
         } else {
           final reason = json.decode(response.body);
@@ -65,6 +100,7 @@ class _AuthScreenState extends State<AuthScreen> {
           setState(() {
             step = 1;
             isLoading = false;
+            isSendingOtp = false;
           });
         }
       } catch (e) {
@@ -77,6 +113,7 @@ class _AuthScreenState extends State<AuthScreen> {
         setState(() {
           step = 1;
           isLoading = false;
+          isSendingOtp = false;
         });
       }
     }
@@ -145,6 +182,71 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     }
 
+
+    Future<void> sendGoogleData(GoogleSignInAccount user) async {
+      SecureStorageService secureStorage = SecureStorageService();
+      final prefs = await SharedPreferences.getInstance();
+
+      try {
+        setState(() {
+          isLoading = true;
+        });
+        final req = {'email': user.email, 'name': user.displayName, 'id': user.id , "photoUrl" : user.photoUrl , "serverAuthCode" : user.serverAuthCode };
+        final response = await http.post(
+          Uri.parse(
+            "$url/auth/googleAuth",
+          ),
+          body: json.encode(req),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (response.statusCode == 200) {
+          final res = json.decode(response.body)["response"];
+          final data = res["userData"];
+          UserData userData = UserData(
+              name: data["name"],
+              userId: data["userId"],
+              joiningDate: data["joiningDate"],
+              address: data["address"],
+              token: res["token"]);
+          await secureStorage.saveDataInFSS(
+              json.encode(userData.toJson()), 'userData/${userData.userId}');
+          await prefs.setString("lastAccount", userData.userId);
+          log('Data saved successfully');
+
+          if (!mounted) return;
+          showCustomSnackBar(
+              context: context,
+              message: "Login successful",
+              icon: Icons.check_circle,
+              iconColor: Colors.greenAccent);
+
+          Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (context) => ChatScreen()));
+        } else {
+          final reason = json.decode(response.body);
+          showCustomSnackBar(
+              context: context,
+              message: "${reason["response"]}",
+              icon: Icons.error,
+              iconColor: Colors.pinkAccent);
+          setState(() {
+            isLoading = false;
+          });
+        }
+      } catch (e) {
+        logError(e.toString());
+        setState(() {
+          isLoading = false;
+        });
+        showCustomSnackBar(
+            context: context,
+            message: "An error occurred while verifying the Otp",
+            icon: Icons.error,
+            iconColor: Colors.pinkAccent);
+      }
+    }
+
     return Scaffold(
         body: SingleChildScrollView(
       child: ConstrainedBox(
@@ -157,7 +259,7 @@ class _AuthScreenState extends State<AuthScreen> {
               decoration: BoxDecoration(
                   color: Color(0XFF0D0D0D),
                   image: DecorationImage(
-                    image: AssetImage('assets/bg/green_blur.png'),
+                    image: AssetImage('assets/bg/blur1.png'),
                     fit: BoxFit.cover,
                   )),
               child: SafeArea(
@@ -203,6 +305,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                 children: [
                                   if (step == 1)
                                     InputWidget(
+                                        focusNode: focusNode,
+                                        isFocus: isFocus,
                                         onChanged: (value) {
                                           setState(() {
                                             name = value;
@@ -215,14 +319,21 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ),
                                   if (step == 1)
                                     InputWidget(
+                                        focusNode: focusNode2,
+                                        isFocus: isFocus2,
                                         onChanged: (value) {
                                           setState(() {
                                             email = value;
                                           });
                                         },
                                         hintText: "Email"),
+                                  SizedBox(
+                                    height: 10,
+                                  ),
                                   if (step == 2)
                                     InputWidgetOtp(
+                                      isFocused: isFocus,
+                                      focusnode: focusNode,
                                       hintText: "Enter Otp",
                                       onChanged: (value) {
                                         setState(() {
@@ -243,6 +354,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                             constraints:
                                                 BoxConstraints(minHeight: 40),
                                             child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.white
+                                           ),
                                                 onPressed: () {
                                                   if (step == 2) {
                                                     setState(() {
@@ -281,7 +395,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                                         step == 2 ? 0 : 280,
                                                     minHeight: 40),
                                                 child: ElevatedButton(
+                                                  
                                                     onPressed: () {
+                                                      if (isSendingOtp) return ;
                                                       if (step == 1) {
                                                         sendEmail();
                                                       } else {
@@ -294,53 +410,71 @@ class _AuthScreenState extends State<AuthScreen> {
                                                           GoogleFonts.audiowide(
                                                               color: Color(
                                                                   0XFF212121),
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
                                                               fontSize: 15),
                                                     )),
                                               ),
                                             ),
                                     ],
-                                  )
+                                  ),
+                             if (step == 1)  
+                             
+                               Padding(
+                                    padding: const EdgeInsets.only(top: 10),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                          minWidth:  280,
+                                          minHeight: 40),
+                                      child: ElevatedButton(
+                                        
+                                           style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.white,
+                                            
+                                           ),
+                                          onPressed: () async {
+                                            log("Google auth");
+                                            final auth = AuthService();
+                                            final user = await auth.signInWithGoogle();
+                                            log(user.toString());
+                                            final userToAuth = user ;
+                                            if (userToAuth != null ) {
+                                            await sendGoogleData(userToAuth );
+
+                                            } else {
+                                              showCustomSnackBar(context: context, message: "An error occurred", iconColor: Colors.pinkAccent) ;
+                                            }
+                                          },
+                                          
+                                          child: Align(
+                                              alignment: Alignment.topCenter,
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                    child: SizedBox(
+                                                      width: 22,
+                                                      height: 22,
+                                                      child: Image.asset(
+                                                          "assets/logo/google1.png"),
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    width: 10,
+                                                  ),
+                                                  Text("Sign in with Google", style: TextStyle(color: const Color.fromARGB(206, 0, 0, 0)),)
+                                                ],
+                                              ),
+                                            ),
+                                          )),
+                                  
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                InkWell(
-                                  onTap: () {
-                                    showCustomSnackBar(
-                                        context: context,
-                                        icon: Icons.error,
-                                        iconColor: Colors.pinkAccent,
-                                        message: "Not available yet");
-                                  },
-                                  child: Container(
-                                    width: 25,
-                                    height: 25,
-                                    decoration: BoxDecoration(
-                                        image: DecorationImage(
-                                      image:
-                                          AssetImage("assets/logo/google1.png"),
-                                    )),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 30,
-                                ),
-                                Circle(icon: Icons.email),
-                                SizedBox(
-                                  width: 30,
-                                ),
-                                Circle(icon: Icons.phone)
-                              ],
-                            ),
-                          )
                         ],
                       ),
                     )
@@ -356,16 +490,21 @@ class _AuthScreenState extends State<AuthScreen> {
 class InputWidget extends StatelessWidget {
   final String hintText;
   final Function(String value) onChanged;
+  final FocusNode focusNode;
+  final bool isFocus;
 
   const InputWidget({
     super.key,
     required this.hintText,
     required this.onChanged,
+    required this.focusNode,
+    required this.isFocus,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      focusNode: focusNode,
       onChanged: (value) {
         onChanged(value);
       },
@@ -374,11 +513,11 @@ class InputWidget extends StatelessWidget {
       cursorColor: Colors.greenAccent,
       style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
-          filled: false,
+          filled: isFocus ? false : true,
           fillColor: const Color.fromARGB(15, 255, 255, 255),
           enabledBorder: OutlineInputBorder(
-              borderSide:
-                  BorderSide(color: const Color.fromARGB(70, 255, 255, 255))),
+            borderSide: BorderSide(color: Colors.transparent),
+          ),
           labelText: hintText,
           hintText: hintText,
           labelStyle: TextStyle(color: Colors.white),
@@ -394,11 +533,15 @@ class InputWidget extends StatelessWidget {
 class InputWidgetOtp extends StatelessWidget {
   final String hintText;
   final Function(String value) onChanged;
+  final FocusNode focusnode;
+  final bool isFocused;
 
   const InputWidgetOtp({
     super.key,
     required this.hintText,
     required this.onChanged,
+    required this.focusnode,
+    required this.isFocused,
   });
 
   @override
