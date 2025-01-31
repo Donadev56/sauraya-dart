@@ -4,10 +4,11 @@ import 'package:sauraya/service/crypto.dart';
 import 'package:sauraya/service/secure_storage.dart';
 
 List<String> availableModels = [
-  "llama3.2:1b",
-  "llama3.2",
+  "qwen2.5:0.5b",
+  "qwen2.5:1.5b",
   "deepseek-chat",
-  "deepseek-r1:1.5b"
+  "qwen2.5:7b",
+  "llama3.2:1b",
 ];
 
 List<String> startingConversions = [

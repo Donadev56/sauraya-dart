@@ -71,6 +71,7 @@ dependencies:
   flutter_skeleton_ui: ^0.0.6
   webview_flutter: ^4.10.0
   google_sign_in: ^6.2.2
+  remove_markdown: ^0.0.2
 
 
 dev_dependencies:
@@ -144,7 +145,7 @@ flutter_native_splash:
   image: assets/icon.png
   android: true
   ios: true
-  
+
 
 flutter_icons:
   android: true

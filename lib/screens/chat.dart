@@ -33,7 +33,7 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   String prompt = "";
   Messages messages = [];
   late TextEditingController _textController;
@@ -57,6 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool hasGenerateAtLastOne = true;
   bool isBottom = false;
   bool isWebSearch = false;
+  bool _isKeyboardOpen = false;
 
   String currentModel = availableModels[2];
 
@@ -415,15 +416,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
       HttpClientRequest request;
       log("Current model : $currentModel");
-      if (currentModel != availableModels[2]) {
-        log("Using default models");
-        request = await client
-            .postUrl(Uri.parse("https://chat.sauraya.com/chat/message"));
+      String url;
+      if (currentModel.contains("deepseek-chat")) {
+        url = "https://chat.sauraya.com/chat/message/dSeek";
+      } else if (currentModel.contains("qw")) {
+        url = "https://chat.sauraya.com/chat/message/qwen";
       } else {
-        log("Using deepSeek model");
-        request = await client
-            .postUrl(Uri.parse("https://chat.sauraya.com/chat/message/dSeek"));
+        url = "https://chat.sauraya.com/chat/message";
       }
+      request = await client.postUrl(Uri.parse(url));
 
       request.headers.contentType = ContentType.json;
 
@@ -548,61 +549,6 @@ class _ChatScreenState extends State<ChatScreen> {
         numberOfResponse: 0,
       );
       stopGenerationWithoutSocket();
-    }
-  }
-
-  Future<void> searchData(Messages lastMessages) async {
-    try {
-      log("Searching for data $prompt");
-
-      hasGenerateAtLastOne = false;
-
-      setState(() {
-        Message thinkingLoader =
-            Message(role: "thinkingLoader", content: "Thinking");
-        messages = [...lastMessages, thinkingLoader];
-        prompt = "";
-        isGeneratingResponse = true;
-
-        _textController.clear();
-
-        scrollToBottom(_messagesScrollController);
-      });
-
-      OllamaChatRequest newChatRequest = OllamaChatRequest(
-          messages: lastMessages,
-          model: currentModel,
-          isWebSearch: isWebSearch,
-          stream: true,
-          token: user.token);
-
-      final response = await http.post(
-          Uri.parse("https://chat.sauraya.com/chat/message/search"),
-          headers: {"Content-Type": "application/json"},
-          body: json.encode(newChatRequest.toJson()));
-      final text = json.decode(response.body)["result"];
-
-      if (response.statusCode == 200) {
-        log("Message received ");
-        hasGenerateAtLastOne = true;
-
-        setState(() {
-          Message newMessage = Message(role: "assistant", content: text);
-          final lastMessages = [...messages];
-          lastMessages.removeWhere((msg) => msg.role == "thinkingLoader");
-
-          messages = [...lastMessages, newMessage];
-          currentNumberOfResponse++;
-
-          scrollToBottom(_messagesScrollController);
-
-          updateState(isGenerating: false, numberOfResponse: 0);
-
-          updateMessages();
-        });
-      }
-    } catch (e) {
-      logError(e.toString());
     }
   }
 
@@ -873,8 +819,22 @@ class _ChatScreenState extends State<ChatScreen> {
     audioPlayer.stop();
     audioPlayer.dispose();
     _focusNode.dispose();
+    WidgetsBinding.instance.removeObserver(this);
 
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    final bottomInset = View.of(context).viewInsets.bottom;
+    final isOpen = bottomInset > 0;
+
+    if (_isKeyboardOpen != isOpen) {
+      setState(() {
+        _isKeyboardOpen = isOpen;
+      });
+    }
   }
 
   @override
@@ -886,6 +846,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _messagesScrollController.addListener(_onScroll);
     speech = stt.SpeechToText();
     audioPlayer = AudioPlayer();
+    WidgetsBinding.instance.addObserver(this);
     _initSpeech();
     audioPlayer.onDurationChanged.listen((duration) {
       setState(() {
@@ -1181,258 +1142,257 @@ class _ChatScreenState extends State<ChatScreen> {
                                   color: Color(0XFF171717),
                                 ),
                                 padding: const EdgeInsets.all(10),
-                                child: Column(
-                                  children: [
-                                    // INPUT ELEMENT SPACE //
-                                    ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                          maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              0.85, // Max 60% de largeur
-                                          maxHeight: 200),
-                                      child: TextField(
-                                        cursorColor: Colors.white60,
-                                        controller: _textController,
-                                        maxLines: null,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            prompt = value;
-                                          });
-                                        },
-                                        focusNode: _focusNode,
-                                        decoration: InputDecoration(
-                                          suffixIcon: !isInputFocus
-                                              ? IconButton(
-                                                  onPressed: takeAction,
-                                                  icon: Icon(
-                                                    isGeneratingResponse
-                                                        ? Icons.square_rounded
-                                                        : Icons.arrow_upward,
-                                                    color: Colors.white,
-                                                  ))
-                                              : null,
-                                          hintText: "Ask anything",
-                                          hintStyle: TextStyle(
-                                            color: Colors.white70,
-                                            fontStyle: FontStyle.italic,
+                                child: AnimatedContainer(
+                                  duration: Duration(microseconds: 1000),
+                                  child: Column(
+                                    children: [
+                                      // INPUT ELEMENT SPACE //
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                            maxWidth: MediaQuery.of(context)
+                                                    .size
+                                                    .width *
+                                                0.85, // Max 60% de largeur
+                                            maxHeight: 200),
+                                        child: TextField(
+                                          cursorColor: Colors.white60,
+                                          controller: _textController,
+                                          maxLines: null,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              prompt = value;
+                                            });
+                                          },
+                                          focusNode: _focusNode,
+                                          decoration: InputDecoration(
+                                            suffixIcon: !isInputFocus
+                                                ? IconButton(
+                                                    onPressed: takeAction,
+                                                    icon: Icon(
+                                                      isGeneratingResponse
+                                                          ? Icons.square_rounded
+                                                          : Icons.arrow_upward,
+                                                      color: Colors.white,
+                                                    ))
+                                                : null,
+                                            hintText: "Ask anything",
+                                            hintStyle: TextStyle(
+                                              color: Colors.white70,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.all(
+                                                    Radius.circular(30)),
+                                                borderSide: BorderSide(
+                                                  color: Colors.transparent,
+                                                  width: 0,
+                                                )),
+                                            enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.all(
+                                                    Radius.circular(30)),
+                                                borderSide: BorderSide(
+                                                  color: Colors.transparent,
+                                                  width: 0,
+                                                )),
+                                            filled: false,
+                                            fillColor: Color(0XFF252525),
+                                            border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.all(
+                                                    Radius.circular(30)),
+                                                borderSide: BorderSide(
+                                                  color: Colors.transparent,
+                                                  width: 0,
+                                                )),
+                                            contentPadding:
+                                                const EdgeInsets.all(12),
                                           ),
-                                          focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.all(
-                                                  Radius.circular(30)),
-                                              borderSide: BorderSide(
-                                                color: Colors.transparent,
-                                                width: 0,
-                                              )),
-                                          enabledBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.all(
-                                                  Radius.circular(30)),
-                                              borderSide: BorderSide(
-                                                color: Colors.transparent,
-                                                width: 0,
-                                              )),
-                                          filled: false,
-                                          fillColor: Color(0XFF252525),
-                                          border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.all(
-                                                  Radius.circular(30)),
-                                              borderSide: BorderSide(
-                                                color: Colors.transparent,
-                                                width: 0,
-                                              )),
-                                          contentPadding:
-                                              const EdgeInsets.all(12),
+                                          style: TextStyle(color: Colors.white),
                                         ),
-                                        style: TextStyle(color: Colors.white),
                                       ),
-                                    ),
 
-                                    // BOTTOM INPUT SPACE //
-                                    isInputFocus
-                                        ? ConstrainedBox(
-                                            constraints: BoxConstraints(
-                                                minWidth: MediaQuery.of(context)
-                                                        .size
-                                                        .width *
-                                                    0.85),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment
-                                                  .spaceBetween, // Espacement uniforme
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.end,
+                                      // BOTTOM INPUT SPACE //
+                                      _isKeyboardOpen || prompt.isNotEmpty
+                                          ? ConstrainedBox(
+                                              constraints: BoxConstraints(
+                                                  minWidth:
+                                                      MediaQuery.of(context)
+                                                              .size
+                                                              .width *
+                                                          0.85),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment
+                                                    .spaceBetween, // Espacement uniforme
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
 
-                                              children: [
-                                                Container(
-                                                    decoration: BoxDecoration(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(50),
-                                                        border: Border.all(
-                                                          color: isWebSearch
-                                                              ? Colors.blue
-                                                              : Colors
-                                                                  .transparent,
-                                                          width: 2,
-                                                        )),
-                                                    child: ClipRRect(
-                                                        borderRadius:
-                                                            BorderRadius.all(
-                                                                Radius.circular(
-                                                                    50)),
-                                                        child: InkWell(
-                                                          onTap: () {
-                                                            setState(() {
-                                                              isWebSearch =
-                                                                  !isWebSearch;
-                                                              if (currentModel !=
-                                                                  availableModels[
-                                                                      2]) {
-                                                                currentModel =
-                                                                    availableModels[
-                                                                        2];
-                                                              }
-                                                            });
-                                                          },
+                                                children: [
+                                                  Container(
+                                                      decoration: BoxDecoration(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(50),
+                                                          border: Border.all(
+                                                            color: isWebSearch
+                                                                ? Colors.blue
+                                                                : Colors
+                                                                    .transparent,
+                                                            width: 2,
+                                                          )),
+                                                      child: ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius.all(
+                                                                  Radius
+                                                                      .circular(
+                                                                          50)),
+                                                          child: InkWell(
+                                                            onTap: () {
+                                                              setState(() {
+                                                                isWebSearch =
+                                                                    !isWebSearch;
+                                                              });
+                                                            },
+                                                            child:
+                                                                AnimatedContainer(
+                                                              duration: Duration(
+                                                                  milliseconds:
+                                                                      500),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color:
+                                                                    Colors.blue,
+                                                              ),
+                                                              child: Row(
+                                                                children: [
+                                                                  AnimatedContainer(
+                                                                    duration: const Duration(
+                                                                        milliseconds:
+                                                                            200),
+                                                                    width: 38,
+                                                                    height: 38,
+                                                                    decoration: BoxDecoration(
+                                                                        color: isWebSearch
+                                                                            ? const Color.fromARGB(
+                                                                                255,
+                                                                                8,
+                                                                                32,
+                                                                                52)
+                                                                            : const Color.fromARGB(
+                                                                                255,
+                                                                                158,
+                                                                                158,
+                                                                                158)),
+                                                                    child: Icon(
+                                                                      FeatherIcons
+                                                                          .globe,
+                                                                      color: Colors
+                                                                          .white,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ))),
+                                                  SizedBox(
+                                                    width: 5,
+                                                  ),
+
+                                                  // RIGHT INPUT ICONS SPACE //
+                                                  Row(
+                                                    children: [
+                                                      ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(50),
+                                                          child: Container(
+                                                            width: 38,
+                                                            height: 38,
+                                                            decoration: BoxDecoration(
+                                                                color: isListening
+                                                                    ? Colors
+                                                                        .blue
+                                                                    : Colors
+                                                                        .transparent),
+                                                            child: IconButton(
+                                                              onPressed: () {
+                                                                if (isListening) {
+                                                                  stopListening();
+                                                                } else {
+                                                                  startListening();
+                                                                }
+                                                              },
+                                                              icon: Icon(
+                                                                  Icons.mic),
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                          )),
+                                                      SizedBox(
+                                                        width: 5,
+                                                      ),
+                                                      ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius.all(
+                                                                  Radius
+                                                                      .circular(
+                                                                          50)),
                                                           child:
                                                               AnimatedContainer(
                                                             duration: Duration(
                                                                 milliseconds:
-                                                                    500),
-                                                            decoration:
-                                                                BoxDecoration(
+                                                                    200),
+                                                            width: 38,
+                                                            height: 38,
+                                                            decoration: BoxDecoration(
+                                                                color: !isGeneratingResponse
+                                                                    ? prompt.isEmpty
+                                                                        ? Colors.grey
+                                                                        : Colors.white
+                                                                    : Colors.white),
+                                                            child: IconButton(
+                                                              onPressed:
+                                                                  takeAction,
+                                                              icon:
+                                                                  !isGeneratingResponse
+                                                                      ? Icon(
+                                                                          Icons
+                                                                              .arrow_upward,
+                                                                          size:
+                                                                              20,
+                                                                        )
+                                                                      : Icon(Icons
+                                                                          .square_rounded),
                                                               color:
-                                                                  Colors.blue,
-                                                            ),
-                                                            child: Row(
-                                                              children: [
-                                                                AnimatedContainer(
-                                                                  duration: const Duration(
-                                                                      milliseconds:
-                                                                          200),
-                                                                  width: 38,
-                                                                  height: 38,
-                                                                  decoration: BoxDecoration(
-                                                                      color: isWebSearch
+                                                                  !isGeneratingResponse
+                                                                      ? prompt
+                                                                              .isEmpty
                                                                           ? const Color
                                                                               .fromARGB(
-                                                                              255,
-                                                                              8,
-                                                                              32,
-                                                                              52)
+                                                                              246,
+                                                                              47,
+                                                                              47,
+                                                                              47)
                                                                           : const Color
                                                                               .fromARGB(
-                                                                              255,
-                                                                              158,
-                                                                              158,
-                                                                              158)),
-                                                                  child: Icon(
-                                                                    FeatherIcons
-                                                                        .globe,
-                                                                    color: Colors
-                                                                        .white,
-                                                                  ),
-                                                                ),
-                                                              ],
+                                                                              239,
+                                                                              0,
+                                                                              0,
+                                                                              0)
+                                                                      : const Color
+                                                                          .fromARGB(
+                                                                          213,
+                                                                          0,
+                                                                          0,
+                                                                          0),
                                                             ),
-                                                          ),
-                                                        ))),
-                                                SizedBox(
-                                                  width: 5,
-                                                ),
-
-                                                // RIGHT INPUT ICONS SPACE //
-                                                Row(
-                                                  children: [
-                                                    ClipRRect(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(50),
-                                                        child: Container(
-                                                          width: 38,
-                                                          height: 38,
-                                                          decoration: BoxDecoration(
-                                                              color: isListening
-                                                                  ? Colors.blue
-                                                                  : Colors
-                                                                      .transparent),
-                                                          child: IconButton(
-                                                            onPressed: () {
-                                                              if (isListening) {
-                                                                stopListening();
-                                                              } else {
-                                                                startListening();
-                                                              }
-                                                            },
-                                                            icon:
-                                                                Icon(Icons.mic),
-                                                            color: Colors.white,
-                                                          ),
-                                                        )),
-                                                    SizedBox(
-                                                      width: 5,
-                                                    ),
-                                                    ClipRRect(
-                                                        borderRadius:
-                                                            BorderRadius.all(
-                                                                Radius.circular(
-                                                                    50)),
-                                                        child:
-                                                            AnimatedContainer(
-                                                          duration: Duration(
-                                                              milliseconds:
-                                                                  200),
-                                                          width: 38,
-                                                          height: 38,
-                                                          decoration: BoxDecoration(
-                                                              color: !isGeneratingResponse
-                                                                  ? prompt.isEmpty
-                                                                      ? Colors.grey
-                                                                      : Colors.white
-                                                                  : Colors.white),
-                                                          child: IconButton(
-                                                            onPressed:
-                                                                takeAction,
-                                                            icon:
-                                                                !isGeneratingResponse
-                                                                    ? Icon(
-                                                                        Icons
-                                                                            .arrow_upward,
-                                                                        size:
-                                                                            20,
-                                                                      )
-                                                                    : Icon(Icons
-                                                                        .square_rounded),
-                                                            color:
-                                                                !isGeneratingResponse
-                                                                    ? prompt
-                                                                            .isEmpty
-                                                                        ? const Color
-                                                                            .fromARGB(
-                                                                            246,
-                                                                            47,
-                                                                            47,
-                                                                            47)
-                                                                        : const Color
-                                                                            .fromARGB(
-                                                                            239,
-                                                                            0,
-                                                                            0,
-                                                                            0)
-                                                                    : const Color
-                                                                        .fromARGB(
-                                                                        213,
-                                                                        0,
-                                                                        0,
-                                                                        0),
-                                                          ),
-                                                        ))
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                        : Container(),
-                                  ],
+                                                          ))
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            )
+                                          : Container(),
+                                    ],
+                                  ),
                                 ),
                               )))))),
 

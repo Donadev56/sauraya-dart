@@ -3,9 +3,9 @@ import 'package:sauraya/logger/logger.dart';
 
 class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: "594191550662-nlaeqrvm0slr15vmroo1ahodd77kr8mm.apps.googleusercontent.com",
-    
-    scopes: ['email', 'profile'], 
+    clientId:
+        "594191550662-nlaeqrvm0slr15vmroo1ahodd77kr8mm.apps.googleusercontent.com",
+    scopes: ['email', 'profile'],
   );
 
   Future<GoogleSignInAccount?> signInWithGoogle() async {

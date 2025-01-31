@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:sauraya/logger/logger.dart';
-//  import 'dart:html';
+//import 'dart:html';
 
 bool saveToWebStorage(String key, String encryptedData) {
   try {
     if (kIsWeb) {
-      //  window.localStorage[key] = encryptedData;
+      // window.localStorage[key] = encryptedData;
       return true;
     }
     logError("The platfrom is not the web");
@@ -19,7 +19,7 @@ bool saveToWebStorage(String key, String encryptedData) {
 String getWebStorageData(String key) {
   try {
     if (kIsWeb) {
-      //   return window.localStorage[key] ?? "";
+      //    return window.localStorage[key] ?? "";
     }
     logError("The platfrom is not the web");
     return "";

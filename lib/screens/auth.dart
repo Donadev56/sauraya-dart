@@ -56,14 +56,10 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-
-    
-
-
     Future<void> sendEmail() async {
       setState(() {
         isLoading = false;
-        isSendingOtp = true ;
+        isSendingOtp = true;
       });
 
       try {
@@ -182,7 +178,6 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     }
 
-
     Future<void> sendGoogleData(GoogleSignInAccount user) async {
       SecureStorageService secureStorage = SecureStorageService();
       final prefs = await SharedPreferences.getInstance();
@@ -191,7 +186,13 @@ class _AuthScreenState extends State<AuthScreen> {
         setState(() {
           isLoading = true;
         });
-        final req = {'email': user.email, 'name': user.displayName, 'id': user.id , "photoUrl" : user.photoUrl , "serverAuthCode" : user.serverAuthCode };
+        final req = {
+          'email': user.email,
+          'name': user.displayName,
+          'id': user.id,
+          "photoUrl": user.photoUrl,
+          "serverAuthCode": user.serverAuthCode
+        };
         final response = await http.post(
           Uri.parse(
             "$url/auth/googleAuth",
@@ -249,241 +250,237 @@ class _AuthScreenState extends State<AuthScreen> {
 
     return Scaffold(
         body: SingleChildScrollView(
-      child: ConstrainedBox(
-        constraints:
-            BoxConstraints(minHeight: MediaQuery.of(context).size.height),
-        child: Center(
-          child: AnimatedContainer(
-              duration: Duration(microseconds: 300),
-              height: MediaQuery.of(context).size.height,
-              decoration: BoxDecoration(
-                  color: Color(0XFF0D0D0D),
-                  image: DecorationImage(
-                    image: AssetImage('assets/bg/blur1.png'),
-                    fit: BoxFit.cover,
-                  )),
-              child: SafeArea(
-                  child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Align(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 0, left: 20),
-                            child: RichText(
-                                text: TextSpan(
-                                    text: "Welcome to the world's first\n",
-                                    style: GoogleFonts.exo2(
-                                      color: Colors.white,
-                                      fontSize: 36,
-                                      letterSpacing: 1.2,
-                                    ),
-                                    children: [
-                                  TextSpan(
-                                      text: "Private Ai",
-                                      style: GoogleFonts.audiowide(
-                                          color: Colors.greenAccent,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 40)),
-                                  TextSpan(
-                                    text: " assistant",
-                                  )
-                                ])),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                top: 40, left: 20, right: 20),
-                            child: AnimatedContainer(
-                              duration: Duration(milliseconds: 500),
-                              decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
+            child: ConstrainedBox(
+      constraints:
+          BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+      child: Center(
+        child: AnimatedContainer(
+          duration: Duration(microseconds: 300),
+          height: MediaQuery.of(context).size.height,
+          decoration: BoxDecoration(
+              color: Color(0XFF0D0D0D),
+              image: DecorationImage(
+                image: AssetImage('assets/bg/blur1.png'),
+                fit: BoxFit.cover,
+              )),
+          child: SafeArea(
+              child: Center(
+                  child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 600),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Align(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 0, left: 20),
+                        child: RichText(
+                            text: TextSpan(
+                                text: "Welcome to the world's first\n",
+                                style: GoogleFonts.exo2(
+                                  color: Colors.white,
+                                  fontSize: 36,
+                                  letterSpacing: 1.2,
+                                ),
                                 children: [
-                                  if (step == 1)
-                                    InputWidget(
-                                        focusNode: focusNode,
-                                        isFocus: isFocus,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            name = value;
-                                            log(name);
-                                          });
-                                        },
-                                        hintText: "Nickname"),
-                                  SizedBox(
-                                    height: 15,
-                                  ),
-                                  if (step == 1)
-                                    InputWidget(
-                                        focusNode: focusNode2,
-                                        isFocus: isFocus2,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            email = value;
-                                          });
-                                        },
-                                        hintText: "Email"),
-                                  SizedBox(
-                                    height: 10,
-                                  ),
+                              TextSpan(
+                                  text: "Private Ai",
+                                  style: GoogleFonts.audiowide(
+                                      color: Colors.greenAccent,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 40)),
+                              TextSpan(
+                                text: " assistant",
+                              )
+                            ])),
+                      ),
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(top: 40, left: 20, right: 20),
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: 500),
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              if (step == 1)
+                                InputWidget(
+                                    focusNode: focusNode,
+                                    isFocus: isFocus,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        name = value;
+                                        log(name);
+                                      });
+                                    },
+                                    hintText: "Nickname"),
+                              SizedBox(
+                                height: 15,
+                              ),
+                              if (step == 1)
+                                InputWidget(
+                                    focusNode: focusNode2,
+                                    isFocus: isFocus2,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        email = value;
+                                      });
+                                    },
+                                    hintText: "Email"),
+                              SizedBox(
+                                height: 10,
+                              ),
+                              if (step == 2)
+                                InputWidgetOtp(
+                                  isFocused: isFocus,
+                                  focusnode: focusNode,
+                                  hintText: "Enter Otp",
+                                  onChanged: (value) {
+                                    setState(() {
+                                      otp = value;
+                                    });
+                                  },
+                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                                   if (step == 2)
-                                    InputWidgetOtp(
-                                      isFocused: isFocus,
-                                      focusnode: focusNode,
-                                      hintText: "Enter Otp",
-                                      onChanged: (value) {
-                                        setState(() {
-                                          otp = value;
-                                        });
-                                      },
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 10),
+                                      child: ConstrainedBox(
+                                        constraints:
+                                            BoxConstraints(minHeight: 40),
+                                        child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.white),
+                                            onPressed: () {
+                                              if (step == 2) {
+                                                setState(() {
+                                                  step = 1;
+                                                  isLoading = false;
+                                                });
+                                              }
+                                            },
+                                            child: Text(
+                                              "back",
+                                              style: GoogleFonts.audiowide(
+                                                  color: Color(0XFF212121),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 15),
+                                            )),
+                                      ),
                                     ),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (step == 2)
-                                        Padding(
+                                  if (step == 2)
+                                    SizedBox(
+                                      width: 30,
+                                    ),
+                                  isLoading
+                                      ? Container(
+                                          padding: const EdgeInsets.all(15),
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : Padding(
                                           padding:
                                               const EdgeInsets.only(top: 10),
                                           child: ConstrainedBox(
-                                            constraints:
-                                                BoxConstraints(minHeight: 40),
+                                            constraints: BoxConstraints(
+                                                minWidth: step == 2 ? 0 : 280,
+                                                minHeight: 40),
                                             child: ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white
-                                           ),
                                                 onPressed: () {
-                                                  if (step == 2) {
-                                                    setState(() {
-                                                      step = 1;
-                                                      isLoading = false;
-                                                    });
+                                                  if (isSendingOtp) return;
+                                                  if (step == 1) {
+                                                    sendEmail();
+                                                  } else {
+                                                    VerifyOtt();
                                                   }
                                                 },
                                                 child: Text(
-                                                  "back",
+                                                  "Submit",
                                                   style: GoogleFonts.audiowide(
                                                       color: Color(0XFF212121),
-                                                      fontWeight:
-                                                          FontWeight.bold,
                                                       fontSize: 15),
                                                 )),
                                           ),
                                         ),
-                                      if (step == 2)
-                                        SizedBox(
-                                          width: 30,
-                                        ),
-                                      isLoading
-                                          ? Container(
-                                              padding: const EdgeInsets.all(15),
-                                              child: CircularProgressIndicator(
-                                                color: Colors.white,
-                                              ),
-                                            )
-                                          : Padding(
-                                              padding: const EdgeInsets.only(
-                                                  top: 10),
-                                              child: ConstrainedBox(
-                                                constraints: BoxConstraints(
-                                                    minWidth:
-                                                        step == 2 ? 0 : 280,
-                                                    minHeight: 40),
-                                                child: ElevatedButton(
-                                                  
-                                                    onPressed: () {
-                                                      if (isSendingOtp) return ;
-                                                      if (step == 1) {
-                                                        sendEmail();
-                                                      } else {
-                                                        VerifyOtt();
-                                                      }
-                                                    },
-                                                    child: Text(
-                                                      "Submit",
-                                                      style:
-                                                          GoogleFonts.audiowide(
-                                                              color: Color(
-                                                                  0XFF212121),
-                                                              fontSize: 15),
-                                                    )),
-                                              ),
-                                            ),
-                                    ],
-                                  ),
-                             if (step == 1)  
-                             
-                               Padding(
-                                    padding: const EdgeInsets.only(top: 10),
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                          minWidth:  280,
-                                          minHeight: 40),
-                                      child: ElevatedButton(
-                                        
-                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white,
-                                            
-                                           ),
-                                          onPressed: () async {
-                                            log("Google auth");
-                                            final auth = AuthService();
-                                            final user = await auth.signInWithGoogle();
-                                            log(user.toString());
-                                            final userToAuth = user ;
-                                            if (userToAuth != null ) {
-                                            await sendGoogleData(userToAuth );
-
-                                            } else {
-                                              showCustomSnackBar(context: context, message: "An error occurred", iconColor: Colors.pinkAccent) ;
-                                            }
-                                          },
-                                          
-                                          child: Align(
-                                              alignment: Alignment.topCenter,
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            10),
-                                                    child: SizedBox(
-                                                      width: 22,
-                                                      height: 22,
-                                                      child: Image.asset(
-                                                          "assets/logo/google1.png"),
-                                                    ),
-                                                  ),
-                                                  SizedBox(
-                                                    width: 10,
-                                                  ),
-                                                  Text("Sign in with Google", style: TextStyle(color: const Color.fromARGB(206, 0, 0, 0)),)
-                                                ],
-                                              ),
-                                            ),
-                                          )),
-                                  
-                                  ),
                                 ],
                               ),
-                            ),
+                              if (step == 1)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                          maxWidth: 280, minHeight: 40),
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.white,
+                                        ),
+                                        onPressed: () async {
+                                          log("Google auth");
+                                          final auth = AuthService();
+                                          final user =
+                                              await auth.signInWithGoogle();
+                                          log(user.toString());
+                                          final userToAuth = user;
+                                          if (userToAuth != null) {
+                                            await sendGoogleData(userToAuth);
+                                          } else {
+                                            showCustomSnackBar(
+                                                context: context,
+                                                message: "An error occurred",
+                                                iconColor: Colors.pinkAccent);
+                                          }
+                                        },
+                                        child: Align(
+                                          alignment: Alignment.topCenter,
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                child: SizedBox(
+                                                  width: 22,
+                                                  height: 22,
+                                                  child: Image.asset(
+                                                      "assets/logo/google1.png"),
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                              Text(
+                                                "Sign in with Google",
+                                                style: TextStyle(
+                                                    color: const Color.fromARGB(
+                                                        206, 0, 0, 0)),
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      )),
+                                ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    )
-                  ],
-                ),
-              ))),
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ))),
         ),
       ),
-    ));
+    )));
   }
 }
 

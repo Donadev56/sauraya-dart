@@ -856,6 +856,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.1"
+  remove_markdown:
+    dependency: "direct main"
+    description:
+      name: remove_markdown
+      sha256: "99798c4147609972e923847504e48e685e91473a70af659c3445fbbbeea8c33c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   rxdart:
     dependency: transitive
     description:
