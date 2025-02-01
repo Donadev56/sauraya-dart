@@ -139,6 +139,140 @@ class MarkdownCustomStyle {
   }
 }
 
+class MarkdownCustomStyleUser {
+  static MarkdownStyleSheet get customStyle {
+    return MarkdownStyleSheet(
+      // Headings
+      h1: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        fontStyle: FontStyle.italic,
+      ),
+      h2: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        fontStyle: FontStyle.italic,
+      ),
+      h3: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontStyle: FontStyle.italic,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
+      h4: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 20,
+        fontWeight: FontWeight.w500,
+      ),
+      h5: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 18,
+        fontWeight: FontWeight.w500,
+      ),
+      h6: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+      ),
+
+      // Paragraph
+      p: const TextStyle(
+        color: Color.fromARGB(255, 255, 255, 255),
+        fontSize: 15,
+      ),
+
+      // Emphasis
+      strong: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+      em: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontStyle: FontStyle.italic,
+      ),
+
+      // Lists
+      listBullet: TextStyle(
+        color: Colors.grey[300],
+        fontSize: 14,
+      ),
+
+      // Blockquote
+      blockquote: const TextStyle(
+        color: Color(0xFFDADCE0),
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: const Color(0xFF2C2C2C),
+        borderRadius: BorderRadius.circular(4.0),
+        border: const Border(
+          left: BorderSide(
+            color: Color(0xFF8A8A8A),
+            width: 4.0,
+          ),
+        ),
+      ),
+      blockquotePadding: const EdgeInsets.symmetric(
+        horizontal: 16.0,
+        vertical: 8.0,
+      ),
+
+      // Horizontal Rule
+      horizontalRuleDecoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            width: 1.5,
+            color: Color(0xFF666666),
+          ),
+        ),
+      ),
+
+      // Links
+      a: const TextStyle(
+        color: Color(0xFF50B5FF),
+        decoration: TextDecoration.underline,
+      ),
+
+      // Inline code
+      code: const TextStyle(
+        color: Color(0xFFF8F8F2),
+        fontFamily: 'Courier',
+        fontSize: 13,
+        backgroundColor: Color(0xFF3A3A3C),
+      ),
+
+      // Code blocks
+      codeblockPadding: const EdgeInsets.all(10.0),
+      codeblockDecoration: BoxDecoration(
+        color: const Color(0xFF3A3A3C),
+        borderRadius: BorderRadius.circular(4.0),
+      ),
+
+      // Tables
+      tableHead: const TextStyle(
+        fontWeight: FontWeight.w600,
+        color: Color(0xFFF8F8F2),
+      ),
+      tableBody: const TextStyle(
+        color: Color(0xFFF8F8F2),
+      ),
+      tableCellsPadding: const EdgeInsets.symmetric(
+        horizontal: 6.0,
+        vertical: 4.0,
+      ),
+      tableBorder: TableBorder.all(
+        color: const Color(0xFFAAAAAA),
+        width: 1.0,
+      ),
+
+      // General spacing
+      blockSpacing: 10.0,
+    );
+  }
+}
+
 final MarkdownBlockStyle = [
   H1Config(
     style: TextStyle(

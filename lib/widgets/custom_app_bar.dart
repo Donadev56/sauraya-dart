@@ -107,6 +107,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           },
           itemBuilder: (BuildContext context) => const [
             PopupMenuItem(
+              value: 'logout',
               child: Row(
                 children: [
                   Icon(
@@ -122,7 +123,6 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ],
               ),
-              value: 'logout',
             ),
           ],
         ),

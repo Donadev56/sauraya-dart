@@ -72,6 +72,8 @@ dependencies:
   webview_flutter: ^4.10.0
   google_sign_in: ^6.2.2
   remove_markdown: ^0.0.2
+  read_pdf_text: ^0.2.3
+  file_picker: ^8.3.1
 
 
 dev_dependencies:

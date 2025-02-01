@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:youtube_player_embed/controller/video_controller.dart';
 import 'package:youtube_player_embed/enum/video_state.dart';
@@ -74,6 +75,7 @@ class MessageManager extends StatelessWidget {
     final bool isThinkingLoader = messages[index].role == 'thinkingLoader';
     final List<String>? videos = messages[index].videos;
     final String msg = messages[index].content;
+    final pdfContent = messages[index].pdfContent;
     final message = messages[index];
     var random = Random();
 
@@ -270,38 +272,80 @@ class MessageManager extends StatelessWidget {
       return Align(
           alignment: Alignment.topRight,
           child: Container(
-            margin: messages.length == index + 1
-                ? const EdgeInsets.only(top: 8, bottom: 100)
-                : const EdgeInsets.all(8),
-            child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.85,
-                ),
-                child: InkWell(
-                  onLongPress: () {
-                    Clipboard.setData(ClipboardData(text: msg)).then((_) {
-                      showCustomSnackBar(
-                          context: context,
-                          message: "Copied",
-                          backgroundColor: Color(0XFF0D0D0D),
-                          icon: Icons.check_circle,
-                          iconColor: Colors.greenAccent);
-                    });
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.all(5),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.all(Radius.circular(15)),
-                      color: darkbgColor,
-                    ),
-                    child: Text(
-                      msg,
-                      style: TextStyle(color: secondaryColor),
-                    ),
+              margin: messages.length == index + 1
+                  ? const EdgeInsets.only(top: 8, bottom: 100)
+                  : const EdgeInsets.all(8),
+              child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.85,
                   ),
-                )),
-          ));
+                  child: Container(
+                    decoration: BoxDecoration(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(20)),
+                        color: darkbgColor),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onLongPress: () {
+                            final withoutMarkdown = removeMarkdown(msg);
+                            Clipboard.setData(
+                                    ClipboardData(text: withoutMarkdown))
+                                .then((_) {
+                              showCustomSnackBar(
+                                  context: context,
+                                  message: "Copied",
+                                  backgroundColor: Color(0XFF0D0D0D),
+                                  icon: Icons.check_circle,
+                                  iconColor: Colors.greenAccent);
+                            });
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(15)),
+                            ),
+                            margin: const EdgeInsets.all(5),
+                            padding: const EdgeInsets.only(
+                                left: 10, right: 10, top: 5, bottom: 5),
+                            child:Column(
+                              children: [
+                              if(pdfContent != null)  Container(
+                                  padding: const EdgeInsets.all(10),
+                                  margin: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: Color(0XFF171717),
+                                    borderRadius: BorderRadius.circular(10)
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(FontAwesomeIcons.file , color: Colors.white,),
+                                      SizedBox(width: 10,),
+                                      Text("Document Uploaded", style: TextStyle(color: Colors.white),)
+                                    ],
+                                  ),
+                                )
+                                ,
+
+                                 MarkdownBody(
+                              data: msg,
+                              styleSheet: MarkdownCustomStyleUser.customStyle,
+                              builders: {
+                                'code': CodeElementBuilder(
+                                    isExec: isExec,
+                                    executePythonCode: executePythonCode,
+                                    textColor: secondaryColor,
+                                    context: context,
+                                    isGeneratingResponse: isGeneratingResponse),
+                                'img': CustomImageBuilder(context: context)
+                              },
+                            ),
+                              ],
+                            )
+                          )),
+                    ),
+                  ))));
     } else if (isThinkingLoader) {
       return Align(
         alignment: Alignment.topLeft,

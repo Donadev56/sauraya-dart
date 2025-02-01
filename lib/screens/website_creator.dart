@@ -671,7 +671,8 @@ class _WebisteCreatorState extends State<WebisteCreator> {
                                   borderRadius: BorderRadius.circular(30),
                                   color: Color(0XFF171717),
                                 ),
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.only(
+                                    left: 10, right: 10, top: 2, bottom: 2),
                                 child: Column(
                                   children: [
                                     // INPUT ELEMENT SPACE //

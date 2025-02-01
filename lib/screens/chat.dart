@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:read_pdf_text/read_pdf_text.dart';
 import 'package:sauraya/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -25,6 +27,7 @@ import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:sauraya/service/data_saver.dart';
 import 'package:youtube_player_embed/controller/video_controller.dart';
+import 'package:file_picker/file_picker.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -58,6 +61,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool isBottom = false;
   bool isWebSearch = false;
   bool _isKeyboardOpen = false;
+  String pdfText = "";
+  bool canPdfCardClose = true;
+  bool isPdfLoading = false;
 
   String currentModel = availableModels[2];
 
@@ -311,6 +317,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               id = msg.msgId;
             }
             Message newMessage = Message(
+                pdfContent: msg.pdfContent,
                 role: msg.role,
                 content: msg.content,
                 msgId: id,
@@ -360,6 +367,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Future<void> sendInitialMessage() async {
     try {
+      if (!canPdfCardClose) {
+       setState(() {
+        canPdfCardClose = true ;
+      });
+      }
+     
       Message sysMessage = Message(
           role: "system",
           content:
@@ -367,7 +380,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
       Messages lastMessages = [...messages];
       Message newMessage =
-          Message(role: "user", content: prompt, msgId: generateUUID());
+          Message(role: "user", content:  prompt , msgId: generateUUID(), pdfContent: pdfText.isNotEmpty ? pdfText : null);
 
       if (lastMessages.isEmpty) {
         lastMessages.add(sysMessage);
@@ -395,18 +408,40 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       hasGenerateAtLastOne = false;
 
       final client = HttpClient();
-
+      Message updatedMessage ;
+      
+       
       setState(() {
         Message thinkingLoader =
             Message(role: "thinkingLoader", content: "Thinking");
         messages = [...lastMessages, thinkingLoader];
         prompt = "";
+
+        
         isGeneratingResponse = true;
 
         _textController.clear();
 
         scrollToBottom(_messagesScrollController);
       });
+      // check the existance of the pdf and add it 
+     final userMessage = lastMessages[lastMessages.length - 1];
+     log("User message : $userMessage");
+    
+     if (pdfText.isNotEmpty) {
+       updatedMessage = Message(
+           role: "user",
+           content: pdfText + userMessage.content,
+           msgId: userMessage.msgId ) ;
+           log("Updated message ${updatedMessage.toJson().toString()}");
+       
+       } else {
+        logError("PDF is empty");
+       updatedMessage = userMessage;
+     } 
+
+     lastMessages[lastMessages.length - 1] = updatedMessage;
+
       OllamaChatRequest newChatRequest = OllamaChatRequest(
           messages: lastMessages,
           model: currentModel,
@@ -454,11 +489,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
                 if (isFirst == true) {
                   hasGenerateAtLastOne = true;
-                  log("Message received  $message");
 
                   setState(() {
                     Message newMessage = Message(
-                        role: "assistant", content: textResponse, msgId: msgId);
+                        pdfContent: pdfText.isEmpty ? null : pdfText,
+                        role: "assistant",
+                        content: textResponse,
+                        msgId: msgId);
                     final lastMessages = [...messages];
                     lastMessages
                         .removeWhere((msg) => msg.role == "thinkingLoader");
@@ -475,7 +512,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 if (currentNumberOfResponse == 2) {
                   scrollToBottom(_messagesScrollController);
                 }
-                log("Message received  $message");
 
                 Messages lastMessages = [...messages];
                 int index =
@@ -505,16 +541,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         matches.map((match) => match.group(0) ?? "").toList();
 
                     Message newMessageWithVideos = Message(
+                        pdfContent: pdfText.isEmpty ? null : pdfText,
                         role: 'assistant',
                         content: newText,
                         videos: videos,
                         msgId: generateUUID());
 
-                    log("message ${(newMessageWithVideos.toJson()).toString()}");
 
-                    lastMessages[messages.length - 1] = newMessageWithVideos;
+                    lastMessages[index] = newMessageWithVideos;
                     setState(() {
                       messages = lastMessages;
+                      if (pdfText.isNotEmpty) {
+                        pdfText = "";
+                      }
                     });
 
                     scrollToBottom(_messagesScrollController);
@@ -796,7 +835,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void takeAction() {
     if (!isGeneratingResponse) {
-      if (prompt.isEmpty) return;
+      if (prompt.isEmpty && pdfText.isEmpty) return;
       FocusScope.of(context).unfocus();
       log("Sending message $prompt");
       sendInitialMessage();
@@ -878,6 +917,51 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> getDocuments() async {
+    try {
+      setState(() {
+        isPdfLoading = true;
+      });
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ["pdf"],
+        allowMultiple: false,
+      );
+      if (result != null) {
+        final path = result.files.single.path;
+        if (path != null) {
+          setState(() {
+            canPdfCardClose = false;
+          });
+          String text = await ReadPdfText.getPDFtext(path);
+          setState(() {
+            pdfText =
+                "This is the content of a pdf, analyze it and tell me what you understand about this content : \n $text";
+            isPdfLoading = false;
+          });
+          log(pdfText);
+        } else {
+          throw Exception("The path was not found");
+        }
+      } else {
+        throw Exception("The file is not deifined");
+      }
+    } catch (e) {
+      logError(e.toString());
+      if (!mounted) return;
+      setState(() {
+        canPdfCardClose = false;
+        pdfText = "";
+        isPdfLoading = false;
+      });
+      showCustomSnackBar(
+          context: context,
+          message: "Error reading PDF",
+          icon: Icons.error,
+          iconColor: Colors.pinkAccent);
+    }
+  }
+
   void updateState(
       {bool? isGenerating,
       List<Message>? updatedMessages,
@@ -908,6 +992,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
     return Scaffold(
       backgroundColor: primaryColor,
       appBar: TopBar(
@@ -1131,7 +1216,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 color: Color.fromARGB(104, 13, 13, 13),
                               ),
                               duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.all(7),
+                              padding: const EdgeInsets.all(4),
                               child: Container(
                                 decoration: BoxDecoration(
                                   border: Border.all(
@@ -1141,17 +1226,64 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                   borderRadius: BorderRadius.circular(30),
                                   color: Color(0XFF171717),
                                 ),
-                                padding: const EdgeInsets.all(10),
+                                padding: EdgeInsets.only(
+                                    top: 2,
+                                    bottom: !_isKeyboardOpen ? 2 : 4,
+                                    left: 12,
+                                    right: 12),
                                 child: AnimatedContainer(
                                   duration: Duration(microseconds: 1000),
                                   child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
+                                      if (!canPdfCardClose)
+                                        SizedBox(
+                                          height: 10,
+                                        ),
+                                      if (!canPdfCardClose)
+                                        SizedBox(
+                                          width: 60,
+                                          height: 60,
+                                          child: Container(
+                                              decoration: BoxDecoration(
+                                                  color: Color(0XFF212121),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          15)),
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  onTap: () {
+                                                    setState(() {
+                                                      pdfText = "";
+                                                      canPdfCardClose = true;
+                                                    });
+                                                  },
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                  child: Center(
+                                                    child: !isPdfLoading
+                                                        ? Text(
+                                                            "PDF",
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold),
+                                                          )
+                                                        : CircularProgressIndicator(
+                                                            color: Colors.white,
+                                                          ),
+                                                  ),
+                                                ),
+                                              )),
+                                        ),
                                       // INPUT ELEMENT SPACE //
                                       ConstrainedBox(
                                         constraints: BoxConstraints(
-                                            maxWidth: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
+                                            maxWidth: width *
                                                 0.85, // Max 60% de largeur
                                             maxHeight: 200),
                                         child: TextField(
@@ -1214,11 +1346,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       _isKeyboardOpen || prompt.isNotEmpty
                                           ? ConstrainedBox(
                                               constraints: BoxConstraints(
-                                                  minWidth:
-                                                      MediaQuery.of(context)
-                                                              .size
-                                                              .width *
-                                                          0.85),
+                                                  minWidth: width * 0.85),
                                               child: Row(
                                                 mainAxisAlignment: MainAxisAlignment
                                                     .spaceBetween, // Espacement uniforme
@@ -1226,72 +1354,213 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                     CrossAxisAlignment.end,
 
                                                 children: [
-                                                  Container(
-                                                      decoration: BoxDecoration(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(50),
-                                                          border: Border.all(
-                                                            color: isWebSearch
-                                                                ? Colors.blue
-                                                                : Colors
-                                                                    .transparent,
-                                                            width: 2,
-                                                          )),
-                                                      child: ClipRRect(
-                                                          borderRadius:
-                                                              BorderRadius.all(
-                                                                  Radius
-                                                                      .circular(
-                                                                          50)),
-                                                          child: InkWell(
-                                                            onTap: () {
-                                                              setState(() {
-                                                                isWebSearch =
-                                                                    !isWebSearch;
-                                                              });
-                                                            },
-                                                            child:
-                                                                AnimatedContainer(
-                                                              duration: Duration(
-                                                                  milliseconds:
-                                                                      500),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                color:
-                                                                    Colors.blue,
-                                                              ),
-                                                              child: Row(
-                                                                children: [
-                                                                  AnimatedContainer(
-                                                                    duration: const Duration(
-                                                                        milliseconds:
-                                                                            200),
-                                                                    width: 38,
-                                                                    height: 38,
-                                                                    decoration: BoxDecoration(
-                                                                        color: isWebSearch
-                                                                            ? const Color.fromARGB(
-                                                                                255,
-                                                                                8,
-                                                                                32,
-                                                                                52)
-                                                                            : const Color.fromARGB(
-                                                                                255,
-                                                                                158,
-                                                                                158,
-                                                                                158)),
-                                                                    child: Icon(
-                                                                      FeatherIcons
-                                                                          .globe,
-                                                                      color: Colors
-                                                                          .white,
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              50),
+                                                                  border: Border
+                                                                      .all(
+                                                                    color: isWebSearch
+                                                                        ? Colors
+                                                                            .blue
+                                                                        : Colors
+                                                                            .transparent,
+                                                                    width: 0.5,
+                                                                  )),
+                                                          child: ClipRRect(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .all(Radius
+                                                                          .circular(
+                                                                              50)),
+                                                              child: Material(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  child:
+                                                                      InkWell(
+                                                                    onTap: () {
+                                                                      setState(
+                                                                          () {
+                                                                        isWebSearch =
+                                                                            !isWebSearch;
+                                                                      });
+                                                                    },
+                                                                    child:
+                                                                        AnimatedContainer(
+                                                                      duration: Duration(
+                                                                          milliseconds:
+                                                                              500),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: Colors
+                                                                            .blue,
+                                                                      ),
+                                                                      child:
+                                                                          Row(
+                                                                        mainAxisAlignment:
+                                                                            MainAxisAlignment.center,
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.center,
+                                                                        children: [
+                                                                          AnimatedContainer(
+                                                                              padding: const EdgeInsets.all(5),
+                                                                              duration: const Duration(milliseconds: 200),
+                                                                              width: 90,
+                                                                              decoration: BoxDecoration(color: isWebSearch ? const Color.fromARGB(255, 8, 32, 52) : Color(0XFF212121)),
+                                                                              child: Row(
+                                                                                children: [
+                                                                                  Icon(
+                                                                                    FeatherIcons.globe,
+                                                                                    color: isWebSearch ? Colors.blue : Colors.white,
+                                                                                  ),
+                                                                                  SizedBox(
+                                                                                    width: 2,
+                                                                                  ),
+                                                                                  Text(
+                                                                                    "Search",
+                                                                                    style: GoogleFonts.exo2(color: !isWebSearch ? Colors.white : Colors.blue),
+                                                                                  )
+                                                                                ],
+                                                                              )),
+                                                                        ],
+                                                                      ),
                                                                     ),
-                                                                  ),
-                                                                ],
-                                                              ),
+                                                                  )))),
+                                                      PopupMenuButton(
+                                                        color:
+                                                            Color(0XFF212121),
+                                                        icon: Icon(Icons
+                                                            .folder_copy_outlined),
+                                                        iconColor:
+                                                            secondaryColor,
+                                                        onSelected:
+                                                            (value) async {
+                                                          log(value);
+
+                                                          if (value != 'pdf') {
+                                                            showCustomSnackBar(
+                                                                context:
+                                                                    context,
+                                                                message:
+                                                                    "Not available yet",
+                                                                iconColor: Colors
+                                                                    .pinkAccent);
+                                                          }
+                                                        },
+                                                        itemBuilder:
+                                                            (BuildContext
+                                                                    context) =>
+                                                                [
+                                                          PopupMenuItem(
+                                                            onTap: () {
+                                                              log("onTap");
+                                                              getDocuments();
+                                                            },
+                                                            value: 'pdf',
+                                                            child: Row(
+                                                              children: [
+                                                                Icon(
+                                                                  Icons
+                                                                      .picture_as_pdf,
+                                                                  color: Colors
+                                                                      .white,
+                                                                ),
+                                                                SizedBox(
+                                                                  width: 10,
+                                                                ),
+                                                                Text(
+                                                                  'Pdf file',
+                                                                  style: TextStyle(
+                                                                      color: Colors
+                                                                          .white),
+                                                                ),
+                                                              ],
                                                             ),
-                                                          ))),
+                                                          ),
+                                                          PopupMenuItem(
+                                                            value: 'image',
+                                                            onTap: () {
+                                                              showCustomSnackBar(
+                                                                  context:
+                                                                      context,
+                                                                  message:
+                                                                      "Not available yet",
+                                                                  iconColor: Colors
+                                                                      .pinkAccent);
+                                                            },
+                                                            child: Row(
+                                                              children: [
+                                                                Icon(
+                                                                  Icons.image,
+                                                                  color: Color
+                                                                      .fromARGB(
+                                                                          127,
+                                                                          255,
+                                                                          255,
+                                                                          255),
+                                                                ),
+                                                                SizedBox(
+                                                                  width: 10,
+                                                                ),
+                                                                Text(
+                                                                  'Image',
+                                                                  style: TextStyle(
+                                                                      color: Color.fromARGB(
+                                                                          127,
+                                                                          255,
+                                                                          255,
+                                                                          255)),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          PopupMenuItem(
+                                                            value: 'video',
+                                                            onTap: () {
+                                                              showCustomSnackBar(
+                                                                  context:
+                                                                      context,
+                                                                  message:
+                                                                      "Not available yet",
+                                                                  iconColor: Colors
+                                                                      .pinkAccent);
+                                                            },
+                                                            child: Row(
+                                                              children: [
+                                                                Icon(
+                                                                  Icons
+                                                                      .video_file,
+                                                                  color: Color
+                                                                      .fromARGB(
+                                                                          127,
+                                                                          255,
+                                                                          255,
+                                                                          255),
+                                                                ),
+                                                                SizedBox(
+                                                                  width: 10,
+                                                                ),
+                                                                Text(
+                                                                  'Video',
+                                                                  style: TextStyle(
+                                                                      color: Color.fromARGB(
+                                                                          127,
+                                                                          255,
+                                                                          255,
+                                                                          255)),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
                                                   SizedBox(
                                                     width: 5,
                                                   ),
@@ -1344,9 +1613,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                             height: 38,
                                                             decoration: BoxDecoration(
                                                                 color: !isGeneratingResponse
-                                                                    ? prompt.isEmpty
-                                                                        ? Colors.grey
-                                                                        : Colors.white
+                                                                    ? prompt.isNotEmpty || pdfText.isNotEmpty 
+                                                                    
+                                                                        ? Colors.white
+                                                                        : Colors.grey
                                                                     : Colors.white),
                                                             child: IconButton(
                                                               onPressed:
@@ -1422,6 +1692,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     currentPosition: _position,
                   ),
                 )),
+
           if (!isBottom && _messagesScrollController.hasClients)
             Positioned(
                 top: MediaQuery.of(context).size.height * 0.65,
@@ -1435,8 +1706,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   },
                   child: ClipPath(
                     child: Container(
-                      width: 50,
-                      height: 50,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(50),
                           color: Color(0XFF212121)),
@@ -1444,6 +1715,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         child: Icon(
                           FeatherIcons.chevronDown,
                           color: Colors.white,
+                          size: 20,
                         ),
                       ),
                     ),

@@ -9,6 +9,7 @@ class Message {
   final List<String>? videos;
   final String? msgId;
   final String? code;
+  final String? pdfContent;
 
   Message({
     required this.role,
@@ -17,18 +18,19 @@ class Message {
     this.videos,
     this.msgId,
     this.code,
+    this.pdfContent,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
-        role: json['role'],
-        content: json['content'],
-        images:
-            json['images'] != null ? List<String>.from(json['images']) : null,
-        videos:
-            json['videos'] != null ? List<String>.from(json['videos']) : null,
-        msgId: json['msgId'],
-        code: json['code']);
+      role: json['role'],
+      content: json['content'],
+      images: json['images'] != null ? List<String>.from(json['images']) : null,
+      videos: json['videos'] != null ? List<String>.from(json['videos']) : null,
+      msgId: json['msgId'],
+      code: json['code'],
+      pdfContent: json['pdfContent'],
+    );
   }
 
   Map<String, dynamic> toJson() {
@@ -39,6 +41,7 @@ class Message {
       'videos': videos,
       'msgId': msgId,
       'code': code,
+      'pdfContent': pdfContent,
     };
   }
 }
